@@ -9,11 +9,12 @@
 import main;
 
 import std.stdio;
-import core.stdc.stdlib;
 import std.range;
 import std.path;
 import std.array;
 import std.algorithm;
+
+import core.stdc.stdlib;
 
 /******************************************
  * Parse the command line.
@@ -86,15 +87,12 @@ Options:
                  findAdjacent!((a,b) => filenameCmp(a,b) == 0);
         if (!s.empty)
         {
-            writefln("Error: duplicate file names %s", s.front);
-            exit(EXIT_FAILURE);
+            err_fatal("duplicate file names %s", s.front);
         }
     }
     else
     {
-        writeln(p.sourceFilenames);
-        writefln("Error: %s source files, but %s output files", p.sourceFilenames.length, p.outFilenames.length);
-        exit(EXIT_FAILURE);
+        err_fatal("%s source files, but %s output files", p.sourceFilenames.length, p.outFilenames.length);
     }
 
     return p;

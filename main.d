@@ -28,3 +28,9 @@ int main(string[] args)
 }
 
 
+void err_fatal(T...)(T args)
+{
+    stderr.write("Error: ");
+    stderr.writefln(args);
+    exit(EXIT_FAILURE);
+}
