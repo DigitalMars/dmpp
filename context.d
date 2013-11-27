@@ -83,27 +83,23 @@ struct Context
  *      sysIndex        paths[sysIndex] is where the system paths start
  */
 
+import std.stdio;
 void combineSearchPaths(const string[] includePaths, const string[] sysIncludePaths,
         out string[] paths, out size_t sysIndex)
 {
-    string[] incpaths;
-    foreach (path; includePaths)
-    {
-        incpaths ~= split(path, pathSeparator);
-    }
-
-    string[] syspaths;
-    foreach (path; sysIncludePaths)
-    {
-        syspaths ~= split(path, pathSeparator);
-    }
+    /* Each element of the paths may contain multiple paths separated by
+     * pathSeparator, so straighten that out
+     */
+    auto incpaths = includePaths.map!(a => splitter(a, pathSeparator)).join;
+    auto syspaths = sysIncludePaths.map!(a => splitter(a, pathSeparator)).join;
 
     /* Concatenate incpaths[] and syspaths[] into paths[]
      * but remove from incpaths[] any that are also in syspaths[]
      */
-    paths = incpaths.filter!((a) => find(syspaths, a).empty).array;
+    paths = incpaths.filter!((a) => !syspaths.canFind(a)).array;
     sysIndex = paths.length;
     paths ~= syspaths;
+
 }
 
 unittest
