@@ -16,6 +16,20 @@ import std.algorithm;
 
 import core.stdc.stdlib;
 
+/*********************
+ * Initialized with the command line arguments.
+ */
+struct Params
+{
+    string[] sourceFilenames;
+    string[] outFilenames;
+    string depFilename;
+    string[] defines;
+    string[] includes;
+    string[] sysincludes;
+}
+
+
 /******************************************
  * Parse the command line.
  * Input:

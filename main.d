@@ -11,23 +11,27 @@ import core.stdc.stdlib;
 import core.memory;
 
 import cmdline;
-
-struct Params
-{
-    string[] sourceFilenames;
-    string[] outFilenames;
-    string depFilename;
-    string[] defines;
-    string[] includes;
-    string[] sysincludes;
-}
+import context;
 
 int main(string[] args)
 {
     // No need to collect
     GC.disable();
 
-    auto params = parseCommandLine(args);
+    const params = parseCommandLine(args);
+
+    auto context = Context(params);
+
+    // Preprocess each file
+    foreach (sourceFilename ; params.sourceFilenames)
+    {
+        context.localStart(sourceFilename);
+        context.preprocess();
+        context.localFinish();
+    }
+
+    context.globalFinish();
+
     return EXIT_SUCCESS;
 }
 
@@ -38,3 +42,4 @@ void err_fatal(T...)(T args)
     stderr.writefln(args);
     exit(EXIT_FAILURE);
 }
+

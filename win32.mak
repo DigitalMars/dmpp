@@ -29,7 +29,7 @@ ZIP=zip32
 # Copy to another directory
 SCP=$(CP)
 
-SRCS=main.d cmdline.d
+SRCS=main.d cmdline.d context.d
 
 MAKEFILES=win32.mak
 
