@@ -10,9 +10,10 @@ import main;
 
 import std.stdio;
 import core.stdc.stdlib;
-import std.format;
 import std.range;
 import std.path;
+import std.array;
+import std.algorithm;
 
 /******************************************
  * Parse the command line.
@@ -37,7 +38,7 @@ Options:
   -D macro[=value]  define macro
   --dep filename    generate dependencies to output file
   -I path           path to #include files
-  -isystem path     path to system #include files
+  --isystem path    path to system #include files
   -o filename       preprocessed output file
 ");
         exit(EXIT_SUCCESS);
@@ -78,19 +79,15 @@ Options:
      */
     if (p.sourceFilenames.length == p.outFilenames.length)
     {
-        auto s = chain(p.sourceFilenames, p.outFilenames, [p.depFilename]);
-        while (!s.empty)
+        // Look for duplicate file names
+        auto s = chain(p.sourceFilenames, p.outFilenames, (&p.depFilename)[0..1]).
+                 array.
+                 sort!((a,b) => filenameCmp(a,b) < 0).
+                 findAdjacent!((a,b) => filenameCmp(a,b) == 0);
+        if (!s.empty)
         {
-            auto name = s.front;
-            s.popFront();
-            foreach (name2; s.save)
-            {
-                if (name == name2)
-                {
-                    writefln("Error: duplicate file names %s and %s", name, name2);
-                    exit(EXIT_FAILURE);
-                }
-            }
+            writefln("Error: duplicate file names %s", s.front);
+            exit(EXIT_FAILURE);
         }
     }
     else

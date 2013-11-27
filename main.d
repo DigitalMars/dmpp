@@ -9,10 +9,12 @@
 import std.stdio;
 import core.stdc.stdlib;
 
+import cmdline;
+
 struct Params
 {
-    string sourceFilename;
-    string outFilename;
+    string[] sourceFilenames;
+    string[] outFilenames;
     string depFilename;
     string[] defines;
     string[] includes;
@@ -26,20 +28,3 @@ int main(string[] args)
 }
 
 
-Params parseCommandLine(string[] args)
-{
-    import std.getopt;
-
-    if (args.length == 1)
-    {
-        writeln(
-"C Preprocessor
-Copyright (c) 2013 by Digital Mars
-All Rights Reserved
-Usage:
-");
-    }
-
-    Params p;
-    return p;
-}

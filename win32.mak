@@ -29,12 +29,15 @@ ZIP=zip32
 # Copy to another directory
 SCP=$(CP)
 
-SRCS=main.d
+SRCS=main.d cmdline.d
 
 MAKEFILES=win32.mak
 
-dmpp.exe : main.d
-	$(DMD) main.d -ofdmpp.exe
+dmpp.exe : $(SRCS)
+	$(DMD) $(SRCS) -ofdmpp.exe
+
+unittest : $(SRCS)
+	$(DMD) $(SRCS) -ofdmpp.exe -unittest -cov
 
 clean:
 	$(DEL) dmpp.exe
