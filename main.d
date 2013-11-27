@@ -8,6 +8,7 @@
 
 import std.stdio;
 import core.stdc.stdlib;
+import core.memory;
 
 import cmdline;
 
@@ -23,6 +24,9 @@ struct Params
 
 int main(string[] args)
 {
+    // No need to collect
+    GC.disable();
+
     auto params = parseCommandLine(args);
     return EXIT_SUCCESS;
 }
