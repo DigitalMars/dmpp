@@ -18,11 +18,11 @@ import main;
 
 struct Id
 {
-    __gshared Id*[string] table;
+    __gshared Id*[ustring] table;
 
-    string name;
+    ustring name;
 
-    private this(string name)
+    private this(ustring name)
     {
         this.name = name;
     }
@@ -32,7 +32,7 @@ struct Id
      * Returns:
      *  Id*  if it is, null if not
      */
-    static Id* search(string name)
+    static Id* search(ustring name)
     {
         auto p = name in table;
         return p ? *p : null;
@@ -44,7 +44,7 @@ struct Id
      * If it's there, return it.
      * If not, create an Id and return it.
      */
-    static Id* pool(string name)
+    static Id* pool(ustring name)
     {
         auto p = name in table;
         if (p)
@@ -59,12 +59,12 @@ struct Id
      * Returns:
      *  null if a redefinition error
      */
-    static Id* defineMacro(string name, string[] parameters, string text, uint flags)
+    static Id* defineMacro(ustring name, ustring[] parameters, ustring text, uint flags)
     {
         auto m = pool(name);
         if (m.flags & IDmacro)
         {
-            if ((m.flags ^ flags) & (IDpredefined | IDdotdotdot | IDparens) ||
+            if ((m.flags ^ flags) & (IDpredefined | IDdotdotdot | IDfunctionLike) ||
                 m.parameters != parameters ||
                 text != text)
             {
@@ -83,7 +83,7 @@ struct Id
         // Macros
         IDmacro      = 1,       // it's a macro in good standing
         IDdotdotdot  = 2,       // the macro has a ...
-        IDparens     = 4,       // the macro has ( )
+        IDfunctionLike = 4,     // the macro has ( ), i.e. is function-like
         IDpredefined = 8,       // the macro is specially predefined
 
         // Pragmas
@@ -117,6 +117,6 @@ struct Id
         IDdefined    = 0x400_0000,
     }
 
-    string text;         // replacement text of the macro
-    string[] parameters; // macro parameters
+    ustring text;         // replacement text of the macro
+    ustring[] parameters; // macro parameters
 }

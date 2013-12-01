@@ -9,6 +9,13 @@
 module skip;
 
 import std.range;
+import std.ascii;
+import std.traits;
+
+import std.stdio;
+import core.stdc.stdio;
+
+import ranges;
 
 void defaultError(T...)(T args)
 {
@@ -105,12 +112,14 @@ unittest
  *      range starting after closing '
  */
 
-R skipCharacterLiteral(alias error = defaultError, R)(R r) if (isInputRange!R)
+R skipCharacterLiteral(alias error = defaultError, R, S)(R r, ref S s)
+        if (isInputRange!R && isOutputRange!(S,ElementEncodingType!R))
 {
     bool slash;
     while (!r.empty)
     {
-        auto c = r.front;
+        auto c = cast(ElementEncodingType!R)r.front;
+        s.put(c);
         r.popFront();
         switch (c)
         {
@@ -132,12 +141,18 @@ R skipCharacterLiteral(alias error = defaultError, R)(R r) if (isInputRange!R)
 
 unittest
 {
+    BitBucket!char b = void;
+
     string s = "456\\\\'x";
-    auto r = s.skipCharacterLiteral();
+    auto r = s.skipCharacterLiteral(b);
     assert(!r.empty && r.front == 'x');
 
-    r = "asdf\\'a'b".skipCharacterLiteral();
+    StaticArrayBuffer!(char,100) a = void;
+    a.init();
+
+    r = "asdf\\'a'b".skipCharacterLiteral(a);
     assert(!r.empty && r.front == 'b');
+    assert(a[] == "asdf\\'a'");
 }
 
 
@@ -149,12 +164,14 @@ unittest
  *      range starting after closing "
  */
 
-R skipStringLiteral(alias error = defaultError, R)(R r) if (isInputRange!R)
+R skipStringLiteral(alias error = defaultError, R, S)(R r, ref S s)
+        if (isInputRange!R && isOutputRange!(S,ElementEncodingType!R))
 {
     bool slash;
     while (!r.empty)
     {
-        auto c = r.front;
+        auto c = cast(ElementEncodingType!R)r.front;
+        s.put(c);
         r.popFront();
         switch (c)
         {
@@ -176,12 +193,19 @@ R skipStringLiteral(alias error = defaultError, R)(R r) if (isInputRange!R)
 
 unittest
 {
+    BitBucket!char b = void;
+
     string s = "456\\\\\"x";
-    auto r = s.skipStringLiteral();
+    auto r = s.skipStringLiteral(b);
     assert(!r.empty && r.front == 'x');
 
-    r = "asdf\\\"a\"b".skipStringLiteral();
+    StaticArrayBuffer!(char,100) a = void;
+    a.init();
+
+    r = "asdf\\\"a\"b".skipStringLiteral(a);
     assert(!r.empty && r.front == 'b');
+//writefln("a = |%s|", a[]);
+    assert(a[] == "asdf\\\"a\"");
 }
 
 
@@ -193,17 +217,21 @@ unittest
  *      range starting after closing "
  */
 
-R skipRawStringLiteral(alias error = defaultError, R)(R r) if (isInputRange!R)
+R skipRawStringLiteral(alias error = defaultError, R, S)(R r, ref S s)
+        if (isInputRange!R && isOutputRange!(S,ElementEncodingType!R))
 {
     enum RAW { start, string, end }
 
     RAW rawstate = RAW.start;
-    typeof(r.front)[16 + 1] dcharbuf = void;
+
+    alias Unqual!(ElementEncodingType!R) E;
+    E[16 + 1] dcharbuf = void;
     size_t dchari = 0;
 
     while (!r.empty)
     {
-        auto c = r.front;
+        auto c = cast(E)r.front;
+        s.put(c);
         r.popFront();
 
         final switch (rawstate)
@@ -272,8 +300,118 @@ R skipRawStringLiteral(alias error = defaultError, R)(R r) if (isInputRange!R)
 
 unittest
 {
-    auto r = "a(bcd\")b\")a\"e".skipRawStringLiteral();
+    StaticArrayBuffer!(char,100) a = void;
+    a.init();
+
+    auto r = "a(bcd\")b\")a\"e".skipRawStringLiteral(a);
     assert(!r.empty && r.front == 'e');
+    assert(a[] == "a(bcd\")b\")a\"");
 }
 
+
+/**************
+ * Skip white space, where whitespace is:
+ *      space, tab, carriage return, C comment, C++ comment
+ * Input:
+ *      R       range is on first character
+ * Returns:
+ *      range starting at first character following whitespace
+ */
+
+R skipWhitespace(alias error = defaultError, R)(R r) if (isInputRange!R)
+{
+    alias Unqual!(ElementType!R) E;
+
+    E lastc = ' ';
+    while (!r.empty)
+    {
+        E c = r.front;
+        switch (c)
+        {
+            case ' ':
+            case '\t':
+            case '\r':
+                break;
+
+            case '/':
+                if (lastc == '/')
+                {
+                    r.popFront();
+                    r = r.skipCppComment!error();
+                    c = ' ';
+                    continue;
+                }
+                break;
+
+            case '*':
+                if (lastc == '/')
+                {
+                    r.popFront();
+                    r = r.skipCComment!error();
+                    c = ' ';
+                    continue;
+                }
+                break;
+
+            default:
+                return r;
+        }
+        lastc = c;
+        r.popFront();
+    }
+    return r;
+}
+
+unittest
+{
+    auto r = (cast(immutable(ubyte)[])" \t\r/* */8").skipWhitespace();
+    assert(!r.empty && r.front == '8');
+
+    r = (cast(immutable(ubyte)[])" // \n8").skipWhitespace();
+    assert(!r.empty && r.front == '8');
+}
+
+
+/**************************************************
+ * Reads in an identifier.
+ * Output:
+ *      s    OutputRange to write identifier to
+ * Returns:
+ *      range after identifier
+ * BUGS: doesn't handle \u, \U or Unicode chars, doesn't do Unicode decoding
+ */
+
+
+R inIdentifier(R, S)(R r, ref S s)
+        if (isInputRange!R && isOutputRange!(S,ElementEncodingType!R))
+{
+    while (!r.empty)
+    {
+        auto c = cast(ElementEncodingType!R)r.front;
+        if (isAlphaNum(c) || c == '_')
+        {
+            s.put(c);
+        }
+        else
+            break;
+        r.popFront();
+    }
+    return r;
+}
+
+unittest
+{
+  {
+    StaticArrayBuffer!(char, 1024) id = void;
+    id.init();
+    auto r = "abZ123_ 3".inIdentifier(id);
+    assert(!r.empty && r.front == ' ' && id[] == "abZ123_");
+  }
+  {
+    StaticArrayBuffer!(ubyte, 1024) id = void;
+    id.init();
+    auto r = (cast(immutable(ubyte)[])"abZ123_ 3").inIdentifier(id);
+    assert(!r.empty && r.front == ' ' && id[] == "abZ123_");
+  }
+}
 

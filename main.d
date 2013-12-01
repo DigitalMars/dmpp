@@ -13,6 +13,9 @@ import core.memory;
 import cmdline;
 import context;
 
+alias char uchar;
+alias immutable(uchar)[] ustring;
+
 int main(string[] args)
 {
     // No need to collect
