@@ -6,6 +6,8 @@
  * Authors: Walter Bright
  */
 
+module cmdline;
+
 import main;
 
 import std.stdio;

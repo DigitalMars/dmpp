@@ -16,6 +16,7 @@ import std.stdio;
 import core.stdc.stdio;
 
 import ranges;
+import macros : ESC;
 
 void defaultError(T...)(T args)
 {
@@ -413,5 +414,109 @@ unittest
     auto r = (cast(immutable(ubyte)[])"abZ123_ 3").inIdentifier(id);
     assert(!r.empty && r.front == ' ' && id[] == "abZ123_");
   }
+}
+
+
+/**************************************************
+ * Skip to the start of the next line.
+ */
+
+R skipToEndOfLine(R)(R r) if (isInputRange!R)
+{
+    while (!r.empty)
+    {
+        auto c = r.front;
+        r.popFront();
+        if (c == '\n')
+            break;
+    }
+    return r;
+}
+
+unittest
+{
+    string s = "abc\ndef";
+    auto r = s.skipToEndOfLine();
+    assert(!r.empty && r.front == 'd');
+}
+
+/**************************************************
+ * Skip to the start of the next line - the rest of the current line
+ * should be blank.
+ */
+
+R skipBlankLine(R)(R r) if (isInputRange!R)
+{
+    while (!r.empty)
+    {
+        auto c = r.front;
+        r.popFront();
+        switch (c)
+        {
+            case '\n':
+                break;
+
+            case ' ':
+            case '\t':
+            case '\v':
+            case '\f':
+            case ESC.space:
+            case ESC.brk:
+                continue;
+
+            case '/':
+                if (r.empty)
+                    break;
+                auto c2 = r.front;
+                r.popFront();
+                if (c2 == '*')
+                {
+                    r = r.skipCComment();
+                    continue;
+                }
+                else if (c2 == '/')
+                {
+                    return r.skipCppComment();
+                }
+                goto default;
+
+             default:
+                // The line isn't blank, which is an error according to the Standard
+                return r.skipToEndOfLine();
+        }
+        break;
+    }
+    return r;
+}
+
+unittest
+{
+    auto s = cast(immutable(ubyte)[])(" \t\v\f" ~ ESC.space ~ ESC.brk ~ "  /* abc */\ndef");
+    auto r = s.skipBlankLine();
+    assert(!r.empty && r.front == 'd');
+
+    auto s2 = "  //C++ comment\nd";
+    auto r2 = s2.skipBlankLine();
+    assert(!r2.empty && r2.front == 'd');
+
+    s2 = "  \nd";
+    r2 = s2.skipBlankLine();
+    assert(!r2.empty && r2.front == 'd');
+
+    s2 = "  ";
+    r2 = s2.skipBlankLine();
+    assert(r2.empty);
+
+    s2 = "  /";
+    r2 = s2.skipBlankLine();
+    assert(r2.empty);
+
+    s2 = "  /a";
+    r2 = s2.skipBlankLine();
+    assert(r2.empty);
+
+    s2 = " a";
+    r2 = s2.skipBlankLine();
+    assert(r2.empty);
 }
 

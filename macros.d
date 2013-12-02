@@ -8,12 +8,14 @@
 
 module macros;
 
-import std.stdio;
+import core.stdc.stdlib;
+import core.stdc.string;
+
 import std.algorithm;
 import std.array;
 import std.ascii;
-import core.stdc.stdlib;
-import core.stdc.string;
+import std.range;
+import std.stdio;
 
 import main;
 import skip;
@@ -925,4 +927,158 @@ unittest
 //writefln("|%s|, %s", arg, arg.length);
     assert(!r.empty && r.front == ',');
     assert(arg == `aR"x(b")x"`);
+}
+
+/*****************************************
+ * 'Break' characters unambiguously separate tokens
+ */
+
+bool isBreak(uchar c) pure nothrow
+{
+    return c == ' ' ||
+           c == '\t' ||
+           c == '\n' ||
+           c == '\v' ||
+           c == '\f' ||
+           c == '\r' ||
+           c == '(' ||
+           c == ')' ||
+           c == ',' ||
+           c == ';' ||
+           c == '?' ||
+           c == '[' ||
+           c == ']' ||
+           c == '{' ||
+           c == '}' ||
+           c == '~';
+}
+
+
+/*************************************
+ * 'MultiTok' characters can be part of multiple character tokens
+ */
+
+bool isMultiTok(uchar c) pure nothrow
+{
+    return c == '*' ||
+           c == '+' ||
+           c == '-' ||
+           c == '.' ||
+           c == '/' ||
+           c == ':' ||
+           c == '<' ||
+           c == '=' ||
+           c == '>' ||
+           c == '^' ||
+           c == '|';
+}
+
+/*********************************************************
+ * Write preprocessed line of output to range.
+ */
+
+void writePreprocessedLine(R)(ref R r, const(uchar)[] line) if (isOutputRange!(R, uchar))
+{
+    auto end = line.ptr + line.length;
+    auto start = line.ptr;
+    auto p = start;
+  Loop:
+    while (1)
+    {
+        if (p == end)
+            break;
+
+        auto c = *p;
+        if (cast(byte)c >= ' ')
+            r.put(c);
+        else
+        {
+            switch (c)
+            {
+                case '\r':
+                case '\n':
+                    break;      // ignore
+
+                default:
+                    r.put(c);
+                    break;
+
+                case ESC.brk:
+                    // Separate tokens by inserting a space (but only if needed)
+                    if (p == start)
+                    {
+                        ++start;                // ignore if at start
+                        break;
+                    }
+                    auto cprev = p[-1];
+                    uchar cnext;
+                    while (1)
+                    {
+                        if (p + 1 == end)       // ignore if at end
+                            break Loop;
+                        ++p;
+                        cnext = *p;
+                        if (cnext != ESC.brk)   // treat multiple ESC.brk's as one
+                            break;
+                    }
+                    if (cnext < 0x80 &&
+                        !isBreak(cprev) && !isBreak(cnext) &&
+                        (isIdentifierStart(cprev) && isIdentifierStart(cnext) ||
+                         isMultiTok(cprev) && isMultiTok(cnext)))
+                    {
+                        r.put(' ');
+                    }
+                    r.put(cnext);
+                    break;
+            }
+        }
+        ++p;
+    }
+    r.put('\n');
+}
+
+unittest
+{
+    StaticArrayBuffer!(uchar, 1024) buf = void;
+
+    buf.init();
+    auto s = cast(ustring)"";
+    buf.writePreprocessedLine(s);
+    assert(buf[] == "\n");
+
+    buf.init();
+    s = cast(ustring)"\r\na b\x07";
+    buf.writePreprocessedLine(s);
+//writefln("|%s| %s", buf[], buf[].length);
+    assert(buf[] == "a b\x07\n");
+
+    buf.init();
+    s = cast(ustring)"" ~ ESC.brk ~ "";
+    buf.writePreprocessedLine(s);
+//writefln("|%s| %s", buf[], buf[].length);
+    assert(buf[] == "\n");
+
+    buf.init();
+    s = cast(ustring)"" ~ ESC.brk ~ ESC.brk ~ ESC.brk ~ "";
+    buf.writePreprocessedLine(s);
+//writefln("|%s| %s", buf[], buf[].length);
+    assert(buf[] == "\n");
+
+    buf.init();
+    s = cast(ustring)"a" ~ ESC.brk ~ ESC.brk ~ ESC.brk ~ "";
+    buf.writePreprocessedLine(s);
+//writefln("|%s| %s", buf[], buf[].length);
+    assert(buf[] == "a\n");
+
+    buf.init();
+    s = cast(ustring)"a" ~ ESC.brk ~ ESC.brk ~ "b" ~ ESC.brk ~ "+";
+    buf.writePreprocessedLine(s);
+writefln("|%s| %s", buf[], buf[].length);
+    assert(buf[] == "a b+\n");
+
+    buf.init();
+    s = cast(ustring)"+" ~ ESC.brk ~ "+" ~ ESC.brk ~ "(";
+    buf.writePreprocessedLine(s);
+writefln("|%s| %s", buf[], buf[].length);
+    assert(buf[] == "+ +(\n");
 }

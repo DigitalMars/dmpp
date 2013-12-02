@@ -29,7 +29,8 @@ ZIP=zip32
 # Copy to another directory
 SCP=$(CP)
 
-SRCS=main.d cmdline.d context.d id.d skip.d macros.d textbuf.d ranges.d
+SRCS=main.d cmdline.d context.d id.d skip.d macros.d textbuf.d ranges.d outdeps.d \
+	lexer.d constexpr.d
 
 MAKEFILES=win32.mak
 
