@@ -1073,12 +1073,12 @@ unittest
     buf.init();
     s = cast(ustring)"a" ~ ESC.brk ~ ESC.brk ~ "b" ~ ESC.brk ~ "+";
     buf.writePreprocessedLine(s);
-writefln("|%s| %s", buf[], buf[].length);
+//writefln("|%s| %s", buf[], buf[].length);
     assert(buf[] == "a b+\n");
 
     buf.init();
     s = cast(ustring)"+" ~ ESC.brk ~ "+" ~ ESC.brk ~ "(";
     buf.writePreprocessedLine(s);
-writefln("|%s| %s", buf[], buf[].length);
+//writefln("|%s| %s", buf[], buf[].length);
     assert(buf[] == "+ +(\n");
 }
