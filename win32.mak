@@ -30,7 +30,7 @@ ZIP=zip32
 SCP=$(CP)
 
 SRCS=main.d cmdline.d context.d id.d skip.d macros.d textbuf.d ranges.d outdeps.d \
-	lexer.d constexpr.d
+	lexer.d constexpr.d number.d
 
 MAKEFILES=win32.mak
 

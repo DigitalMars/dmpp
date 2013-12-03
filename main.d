@@ -16,26 +16,33 @@ import context;
 alias char uchar;
 alias immutable(uchar)[] ustring;
 
-int main(string[] args)
+version (unittest)
 {
-    // No need to collect
-    GC.disable();
-
-    const params = parseCommandLine(args);
-
-    auto context = Context(params);
-
-    // Preprocess each file
-    foreach (sourceFilename ; params.sourceFilenames)
+    int main() { writeln("unittests successful"); return EXIT_SUCCESS; }
+}
+else
+{
+    int main(string[] args)
     {
-        context.localStart(sourceFilename);
-        context.preprocess();
-        context.localFinish();
+        // No need to collect
+        GC.disable();
+
+        const params = parseCommandLine(args);
+
+        auto context = Context(params);
+
+        // Preprocess each file
+        foreach (sourceFilename ; params.sourceFilenames)
+        {
+            context.localStart(sourceFilename);
+            context.preprocess();
+            context.localFinish();
+        }
+
+        context.globalFinish();
+
+        return EXIT_SUCCESS;
     }
-
-    context.globalFinish();
-
-    return EXIT_SUCCESS;
 }
 
 

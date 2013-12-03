@@ -13,10 +13,11 @@ import std.range;
 import std.stdio;
 import std.traits;
 
-import main;
 import id;
 import macros;
-
+import main;
+import number;
+import skip;
 
 /**
  * Only a relatively small number of tokens are of interest to the preprocessor.
@@ -61,7 +62,7 @@ enum TOK
 }
 
 alias long ppint_t;
-alias long ppuint_t;
+alias ulong ppuint_t;
 
 struct PPnumber
 {
@@ -91,7 +92,6 @@ struct Lexer(R) if (isInputRange!R)
             }
 
             E c = cast(E)src.front;
-            src.popFront();
             switch (c)
             {
                 case ' ':
@@ -101,24 +101,30 @@ struct Lexer(R) if (isInputRange!R)
                 case '\f':
                 case ESC.space:
                 case ESC.brk:
+                    src.popFront();
                     continue;
 
                 case '\n':
+                    src.popFront();
                     front = TOK.eof;
                     return;
 
                 case '0': .. case '9':
-                    lexNumber(c);
-                    front = TOK.integer;
+                {
+                    bool isinteger;
+                    src = src.lexNumber(number.value, number.isunsigned, isinteger);
+                    front = isinteger ? TOK.integer : TOK.other;
                     return;
+                }
 
                 case '.':
+                    src.popFront();
                     if (!src.empty)
                     {
                         switch (src.front)
                         {
                             case '0': .. case '9':
-                                lexFloat(c);
+                                src = src.skipFloat(false, true, false);
                                 break;
 
                             case '*':
@@ -141,6 +147,7 @@ struct Lexer(R) if (isInputRange!R)
                     goto Lother;
 
                 case '!':
+                    src.popFront();
                     if (!src.empty && src.front == '=')
                     {
                         src.popFront();
@@ -151,6 +158,7 @@ struct Lexer(R) if (isInputRange!R)
                     return;
 
                 case '=':
+                    src.popFront();
                     if (!src.empty && src.front == '=')
                     {
                         src.popFront();
@@ -160,6 +168,7 @@ struct Lexer(R) if (isInputRange!R)
                     goto Lother;
 
                 case '<':
+                    src.popFront();
                     if (!src.empty && src.front == '=')
                     {
                         src.popFront();
@@ -176,6 +185,7 @@ struct Lexer(R) if (isInputRange!R)
                     return;
 
                 case '>':
+                    src.popFront();
                     if (!src.empty && src.front == '=')
                     {
                         src.popFront();
@@ -192,6 +202,7 @@ struct Lexer(R) if (isInputRange!R)
                     return;
 
                 case '%':
+                    src.popFront();
                     if (!src.empty && src.front == '=')
                     {
                         src.popFront();
@@ -201,6 +212,7 @@ struct Lexer(R) if (isInputRange!R)
                     return;
 
                 case '*':
+                    src.popFront();
                     if (!src.empty && src.front == '=')
                     {
                         src.popFront();
@@ -210,6 +222,7 @@ struct Lexer(R) if (isInputRange!R)
                     return;
 
                 case '^':
+                    src.popFront();
                     if (!src.empty && src.front == '=')
                     {
                         src.popFront();
@@ -219,6 +232,7 @@ struct Lexer(R) if (isInputRange!R)
                     return;
 
                 case '+':
+                    src.popFront();
                     if (!src.empty && src.front == '=')
                     {
                         src.popFront();
@@ -233,6 +247,7 @@ struct Lexer(R) if (isInputRange!R)
                     return;
 
                 case '-':
+                    src.popFront();
                     if (!src.empty)
                     {
                         switch (src.front)
@@ -256,13 +271,14 @@ struct Lexer(R) if (isInputRange!R)
                     return;
 
                 case '&':
+                    src.popFront();
                     if (!src.empty)
                     {
                         switch (src.front)
                         {
                             case '=':
                                 src.popFront();
-                                break;
+                                goto Lother;
 
                             case '&':
                                 src.popFront();
@@ -270,20 +286,21 @@ struct Lexer(R) if (isInputRange!R)
                                 return;
 
                             default:
-                                front = TOK.and;
-                                return;
+                                break;
                         }
                     }
-                    goto Lother;
+                    front = TOK.and;
+                    return;
 
                 case '|':
+                    src.popFront();
                     if (!src.empty)
                     {
                         switch (src.front)
                         {
                             case '=':
                                 src.popFront();
-                                break;
+                                goto Lother;
 
                             case '|':
                                 src.popFront();
@@ -291,31 +308,64 @@ struct Lexer(R) if (isInputRange!R)
                                 return;
 
                             default:
-                                front = TOK.or;
-                                return;
+                                break;
                         }
                     }
-                    goto Lother;
+                    front = TOK.or;
+                    return;
 
-                case '(':    front = TOK.lparen;    return;
-                case ')':    front = TOK.rparen;    return;
-                case ',':    front = TOK.comma;     return;
-                case '?':    front = TOK.question;  return;
-                case '~':    front = TOK.tilde;     return;
+                case '(':    src.popFront(); front = TOK.lparen;    return;
+                case ')':    src.popFront(); front = TOK.rparen;    return;
+                case ',':    src.popFront(); front = TOK.comma;     return;
+                case '?':    src.popFront(); front = TOK.question;  return;
+                case ':':    src.popFront(); front = TOK.colon;     return;
+                case '~':    src.popFront(); front = TOK.tilde;     return;
 
                 case '{':
                 case '}':
                 case '[':
                 case ']':
+                case ';':
+                    src.popFront();
                     goto Lother;
 
-                case '\\':
                 case '/':
-                case ':':
-                case ';':
+                    src.popFront();
+                    if (!src.empty)
+                    {
+                        switch (src.front)
+                        {
+                            case '=':
+                                src.popFront();
+                                goto Lother;
+
+                            case '/':
+                                src.popFront();
+                                src = src.skipCppComment();
+                                continue;
+
+                            case '*':
+                                src.popFront();
+                                src = src.skipCComment();
+                                continue;
+
+                            default:
+                                break;
+                        }
+                    }
+                    front = TOK.div;
+                    return;
+
+                case '\\':
+                     // \u or \U could be start of identifier
+                    src.popFront();
+                    assert(0);   // not handled yet
+                    break;
+
                 case '"':
                 case '\'':
                 case ESC.expand:
+                    src.popFront();
                     goto Lother;
 
                 Lother:
@@ -324,17 +374,10 @@ struct Lexer(R) if (isInputRange!R)
 
                 default:
                     err_fatal("unrecognized preprocessor token");
+                    src.popFront();
                     break;
             }
         }
-    }
-
-    void lexNumber(E c)
-    {
-    }
-
-    void lexFloat(E c)
-    {
     }
 }
 
@@ -407,7 +450,7 @@ unittest
     assert(lexer.front == TOK.eof);
   }
   {
-    auto s = cast(immutable(ubyte)[])("(),?~{}[]");
+    auto s = cast(immutable(ubyte)[])("(),?~{}[];:");
     auto lexer = createLexer(s);
     assert(!lexer.empty);
     assert(lexer.front == TOK.lparen);
@@ -427,6 +470,10 @@ unittest
     assert(lexer.front == TOK.other);
     lexer.popFront();
     assert(lexer.front == TOK.other);
+    lexer.popFront();
+    assert(lexer.front == TOK.other);
+    lexer.popFront();
+    assert(lexer.front == TOK.colon);
     lexer.popFront();
     assert(lexer.front == TOK.eof);
   }
@@ -479,6 +526,34 @@ unittest
     assert(lexer.front == TOK.other);
     lexer.popFront();
     assert(lexer.front == TOK.other);
+    lexer.popFront();
+    assert(lexer.front == TOK.eof);
+  }
+  {
+    auto s = cast(immutable(ubyte)[])(" + // \n");
+    auto lexer = createLexer(s);
+    assert(!lexer.empty);
+    assert(lexer.front == TOK.plus);
+    lexer.popFront();
+    assert(lexer.front == TOK.eof);
+  }
+  {
+    auto s = cast(immutable(ubyte)[])(" / /* */ /=");
+    auto lexer = createLexer(s);
+    assert(!lexer.empty);
+    assert(lexer.front == TOK.div);
+    lexer.popFront();
+    assert(lexer.front == TOK.other);
+    lexer.popFront();
+    assert(lexer.front == TOK.eof);
+  }
+  {
+    auto s = cast(immutable(ubyte)[])(" 100u \n");
+    auto lexer = createLexer(s);
+    assert(!lexer.empty);
+    assert(lexer.front == TOK.integer);
+    assert(lexer.number.value == 100);
+    assert(lexer.number.isunsigned);
     lexer.popFront();
     assert(lexer.front == TOK.eof);
   }
