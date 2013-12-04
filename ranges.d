@@ -31,6 +31,8 @@ struct StaticArrayBuffer(E, size_t N)
     {
         return arr[0 .. i];
     }
+
+    @property size_t length() { return i; }
 }
 
 //import std.stdio;

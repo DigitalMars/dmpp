@@ -17,7 +17,9 @@ import id;
 import macros;
 import main;
 import number;
+import ranges;
 import skip;
+import stringlit;
 
 /**
  * Only a relatively small number of tokens are of interest to the preprocessor.
@@ -78,6 +80,9 @@ struct Lexer(R) if (isInputRange!R)
 
     alias Unqual!(ElementEncodingType!R) E;
     R src;
+    BitBucket!E bitbucket;
+
+    StaticArrayBuffer!(E, 1024) idbuf = void;
 
     enum empty = false;         // return TOK.eof for going off the end
 
@@ -356,21 +361,102 @@ struct Lexer(R) if (isInputRange!R)
                     front = TOK.div;
                     return;
 
+                case '"':
+                    src.popFront();
+                    src = src.skipStringLiteral(bitbucket);
+                    goto Lother;
+
+                case '\'':
+                    src.popFront();
+                    src = src.lexCharacterLiteral(number.value, STR.s);
+                    number.isunsigned = false;
+                    front = TOK.integer;
+                    return;
+
+                case '$':
+                case '_':
+                case 'a': .. case 't':
+                case 'v': .. case 'z':
+                case 'A': .. case 'K':
+                case 'M': .. case 'Q':
+                case 'S': .. case 'T':
+                case 'V': .. case 'Z':
+                    idbuf.init();
+                    src = src.inIdentifier(idbuf);
+                Lident:
+                    front = TOK.identifier;
+                    return;
+
+                case 'L':
+                case 'u':
+                case 'U':
+                case 'R':
+                    // string prefixes: L LR u u8 uR u8R U UR R
+                    idbuf.init();
+                    src = src.inIdentifier(idbuf);
+                    if (!src.empty)
+                    {
+                        if (src.front == '"')
+                        {
+                            switch (cast(string)idbuf[])
+                            {
+                                case "LR":
+                                case "R":
+                                case "u8R":
+                                case "uR":
+                                case "UR":
+                                    src.popFront();
+                                    src = src.skipRawStringLiteral(bitbucket);
+                                    goto Lother;
+
+                                case "L":
+                                case "u":
+                                case "u8":
+                                case "U":
+                                    src.popFront();
+                                    src = src.skipStringLiteral(bitbucket);
+                                    goto Lother;
+
+                                default:
+                                    break;
+                            }
+                        }
+                        else if (src.front == '\'')
+                        {
+                            auto s = STR.s;
+                            switch (cast(string)idbuf[])
+                            {
+                                case "L":       s = STR.L;  goto Lchar;
+                                case "u":       s = STR.u;  goto Lchar;
+                                case "u8":      s = STR.u8; goto Lchar;
+                                case "U":       s = STR.U;  goto Lchar;
+                                Lchar:
+                                    src.popFront();
+                                    src = src.lexCharacterLiteral(number.value, s);
+                                    number.isunsigned = false;
+                                    front = TOK.integer;
+                                    return;
+
+                                default:
+                                    break;
+                            }
+                        }
+                    }
+                    goto Lident;
+
+                Lother:
+                    front = TOK.other;
+                    return;
+
                 case '\\':
                      // \u or \U could be start of identifier
                     src.popFront();
                     assert(0);   // not handled yet
                     break;
 
-                case '"':
-                case '\'':
                 case ESC.expand:
-                    src.popFront();
-                    goto Lother;
-
-                Lother:
-                    front = TOK.other;
-                    return;
+                    assert(0);   // not handled yet
+                    break;
 
                 default:
                     err_fatal("unrecognized preprocessor token");
@@ -554,6 +640,88 @@ unittest
     assert(lexer.front == TOK.integer);
     assert(lexer.number.value == 100);
     assert(lexer.number.isunsigned);
+    lexer.popFront();
+    assert(lexer.front == TOK.eof);
+  }
+  {
+    auto s = cast(immutable(ubyte)[])(" \"123\" \n");
+    auto lexer = createLexer(s);
+    assert(!lexer.empty);
+    assert(lexer.front == TOK.other);
+    lexer.popFront();
+    assert(lexer.front == TOK.eof);
+  }
+  {
+    auto s = cast(immutable(ubyte)[])(" abc $def _ehi \n");
+    auto lexer = createLexer(s);
+    assert(!lexer.empty);
+    assert(lexer.front == TOK.identifier && lexer.idbuf[] == "abc");
+    lexer.popFront();
+    assert(lexer.front == TOK.identifier && lexer.idbuf[] == "$def");
+    lexer.popFront();
+    assert(lexer.front == TOK.identifier && lexer.idbuf[] == "_ehi");
+    lexer.popFront();
+    assert(lexer.front == TOK.eof);
+  }
+  {
+    auto s = cast(immutable(ubyte)[])(" LR\"x(\")x\" R\"x(\")x\" u8R\"x(\")x\" uR\"x(\")x\" UR\"x(\")x\" \n");
+    auto lexer = createLexer(s);
+    assert(!lexer.empty);
+    assert(lexer.front == TOK.other);
+    lexer.popFront();
+    assert(lexer.front == TOK.other);
+    lexer.popFront();
+    assert(lexer.front == TOK.other);
+    lexer.popFront();
+    assert(lexer.front == TOK.other);
+    lexer.popFront();
+    assert(lexer.front == TOK.other);
+    lexer.popFront();
+    assert(lexer.front == TOK.eof);
+  }
+  {
+    auto s = cast(immutable(ubyte)[])(" L\"a\" u\"a\" u8\"a\" U\"a\" LX\"a\" \n");
+    auto lexer = createLexer(s);
+    assert(!lexer.empty);
+    assert(lexer.front == TOK.other);
+    lexer.popFront();
+    assert(lexer.front == TOK.other);
+    lexer.popFront();
+    assert(lexer.front == TOK.other);
+    lexer.popFront();
+    assert(lexer.front == TOK.other);
+    lexer.popFront();
+    assert(lexer.front == TOK.identifier && lexer.idbuf[] == "LX");
+    lexer.popFront();
+    assert(lexer.front == TOK.other);
+    lexer.popFront();
+    assert(lexer.front == TOK.eof);
+  }
+  {
+    auto s = cast(immutable(ubyte)[])(" 'a' L'a' u'a' u8'a' U'a' LX'a' \n");
+    auto lexer = createLexer(s);
+    assert(!lexer.empty);
+    assert(lexer.front == TOK.integer && lexer.number.value == 'a');
+    lexer.popFront();
+    assert(lexer.front == TOK.integer && lexer.number.value == 'a');
+    lexer.popFront();
+    assert(lexer.front == TOK.integer && lexer.number.value == 'a');
+    lexer.popFront();
+    assert(lexer.front == TOK.integer && lexer.number.value == 'a');
+    lexer.popFront();
+    assert(lexer.front == TOK.integer && lexer.number.value == 'a');
+    lexer.popFront();
+    assert(lexer.front == TOK.identifier && lexer.idbuf[] == "LX");
+    lexer.popFront();
+    assert(lexer.front == TOK.integer && lexer.number.value == 'a');
+    lexer.popFront();
+    assert(lexer.front == TOK.eof);
+  }
+  {
+    auto s = cast(immutable(ubyte)[])(" .088 \n");
+    auto lexer = createLexer(s);
+    assert(!lexer.empty);
+    assert(lexer.front == TOK.other);
     lexer.popFront();
     assert(lexer.front == TOK.eof);
   }

@@ -8,15 +8,15 @@
 
 module skip;
 
-import std.range;
 import std.ascii;
+import std.range;
 import std.traits;
 
 import std.stdio;
 import core.stdc.stdio;
 
-import ranges;
 import macros : ESC;
+import ranges;
 
 void defaultError(T...)(T args)
 {
@@ -389,7 +389,7 @@ R inIdentifier(R, S)(R r, ref S s)
     while (!r.empty)
     {
         auto c = cast(ElementEncodingType!R)r.front;
-        if (isAlphaNum(c) || c == '_')
+        if (isAlphaNum(c) || c == '_' || c == '$')
         {
             s.put(c);
         }

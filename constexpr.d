@@ -31,22 +31,22 @@ PPnumber Primary(Lexer)(ref Lexer r)
     switch (r.front)
     {
         case TOK.identifier:
-            break;
-
-        case TOK.defined:
-            r.popFront();
-            if (r.front != TOK.identifier)
-                err_fatal("identifier expected");
-            else
+            if (r.idbuf[] == "defined")
             {
-/+
-                if (r.id.flags & IDmacro)
+                r.popFront();
+                if (r.front != TOK.identifier)
+                    err_fatal("identifier expected");
+                else
                 {
-                    PPnumber i;
-                    i.value = 1;
-                    return i;
+    /+
+                    if (r.id.flags & IDmacro)
+                    {
+                        PPnumber i;
+                        i.value = 1;
+                        return i;
+                    }
+    +/
                 }
-+/
             }
             break;
 
@@ -75,6 +75,14 @@ unittest
     auto n = lexer.Primary();
     assert(n.value == 100);
     assert(n.isunsigned == true);
+  }
+  {
+    auto s = cast(immutable(ubyte)[])(" abc \n");
+    auto lexer = createLexer(s);
+    assert(!lexer.empty);
+    auto n = lexer.Primary();
+    assert(n.value == 0);
+    assert(n.isunsigned == false);
   }
 }
 
