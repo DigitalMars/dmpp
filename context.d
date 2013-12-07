@@ -6,11 +6,22 @@
  * Authors: Walter Bright
  */
 
-import std.path;
+module context;
+
 import std.algorithm;
 import std.array;
+import std.path;
+import std.range;
+import std.stdio;
+import std.traits;
 
 import cmdline;
+import expanded;
+import loc;
+import macros;
+import main;
+import textbuf;
+import sources;
 
 /*********************************
  * Keep the state of the preprocessor in this struct.
@@ -28,6 +39,17 @@ struct Context
     bool doDeps;        // true if doing dependency file generation
     char[] deps;        // dependency file contents
 
+    Source[10] sources;
+    int sourcei = -1;
+    int sourceFilei = -1;
+
+    uchar xc = ' ';
+
+    Expanded expanded;
+
+    Loc lastloc;
+    bool uselastloc;
+
     /******
      * Construct global context from the command line parameters
      */
@@ -37,13 +59,27 @@ struct Context
         this.doDeps = params.depFilename.length != 0;
 
         combineSearchPaths(params.includes, params.sysincludes, paths, sysIndex);
+
+        foreach (i; 0 .. sources.length)
+        {
+            sources[i].lineBuffer = Textbuf!uchar(sources[i].tmpbuf);
+        }
+
+        expanded.initialize(&this);
     }
 
     /**********
      * Create local context
      */
-    void localStart(string sourceFilename)
+    void localStart(string sourceFilename, string outFilename)
     {
+        writefln("from %s to %s", sourceFilename, outFilename);
+        expanded.start(outFilename);
+        auto s = push();
+        sourceFilei = sourcei;
+        s.addFile(sourceFilename, false);
+        if (lastloc.srcFile)
+            uselastloc = true;
     }
 
     /**********
@@ -51,6 +87,11 @@ struct Context
      */
     void preprocess()
     {
+        while (!empty)
+        {
+            auto c = front();
+            popFront();
+        }
     }
 
     /**********
@@ -58,6 +99,7 @@ struct Context
      */
     void localFinish()
     {
+        expanded.finish();
     }
 
     /**********
@@ -70,44 +112,191 @@ struct Context
             std.file.write(params.depFilename, deps);
         }
     }
+
+    @property bool empty()
+    {
+        return xc == xc.init;
+    }
+
+    @property uchar front()
+    {
+        return xc;
+    }
+
+    void popFront()
+    {
+        while (1)
+        {
+            auto s = &sources[sourcei];
+            if (s.texti < s.lineBuffer.length)
+            {
+                xc = s.lineBuffer[s.texti];
+                ++s.texti;
+            }
+            else
+            {
+                if (s.isFile && !s.input.empty)
+                {
+                    s.readLine();
+                    continue;
+                }
+                ++s.loc.lineNumber;
+                s = pop();
+                if (s)
+                    continue;
+                xc = xc.init;
+                break;
+            }
+            expanded.put(xc);
+            break;
+        }
+    }
+
+    void unget()
+    {
+        assert(sources[sourcei].texti);
+        --sources[sourcei].texti;
+    }
+
+    Source* currentSourceFile()
+    {
+        return sourceFilei == -1 ? null : &sources[sourceFilei];
+    }
+
+    Source* push()
+    {
+        ++sourcei;
+        return &sources[sourcei];
+    }
+
+    Source* pop()
+    {
+        auto s = &sources[sourcei];
+        if (s.isFile)
+        {
+            // Back up and find previous file; -1 if none
+            if (sourceFilei == sourcei)
+            {
+                auto i = sourcei;
+                while (1)
+                {
+                    --i;
+                    if (i < 0 || sources[i].isFile)
+                    {
+                        sourceFilei = i;
+                        break;
+                    }
+                }
+            }
+            lastloc = s.loc;
+            uselastloc = true;
+            if (s.includeGuard)
+            {
+                assert(0);              // fix
+                //if (saw #endif and no tokens)
+                    s.loc.srcFile.includeGuard = s.includeGuard;
+            }
+        }
+        --sourcei;
+        return sourcei == -1 ? null : &sources[sourcei];
+    }
 }
 
-/***********************************
- * Construct the total search path from the regular include paths and the
- * system include paths.
- * Input:
- *      includePaths    regular include paths
- *      sysIncludePaths system include paths
- * Output:
- *      paths           combined result
- *      sysIndex        paths[sysIndex] is where the system paths start
+/********************************************
+ * Read a line of source from r and write it to the output range s.
+ * Make sure line ends with \n
  */
 
-import std.stdio;
-void combineSearchPaths(const string[] includePaths, const string[] sysIncludePaths,
-        out string[] paths, out size_t sysIndex)
+R readLine(R, S)(R r, ref S s)
+        if (isInputRange!R && isOutputRange!(S,ElementEncodingType!R))
 {
-    /* Each element of the paths may contain multiple paths separated by
-     * pathSeparator, so straighten that out
-     */
-    auto incpaths = includePaths.map!(a => splitter(a, pathSeparator)).join;
-    auto syspaths = sysIncludePaths.map!(a => splitter(a, pathSeparator)).join;
+    alias Unqual!(ElementEncodingType!R) E;
 
-    /* Concatenate incpaths[] and syspaths[] into paths[]
-     * but remove from incpaths[] any that are also in syspaths[]
-     */
-    paths = incpaths.filter!((a) => !syspaths.canFind(a)).array;
-    sysIndex = paths.length;
-    paths ~= syspaths;
+    while (1)
+    {
+        if (r.empty)
+        {
+            s.put('\n');
+            break;
+        }
+        E c = cast(E)r.front;
+        r.popFront();
+        switch (c)
+        {
+            case '\r':
+                continue;
 
+            case '\n':
+                s.put(c);
+                break;
+
+            default:
+                s.put(c);
+                continue;
+        }
+        break;
+    }
+    return r;
 }
 
-unittest
-{
-    string[] paths;
-    size_t sysIndex;
 
-    combineSearchPaths(["a" ~ pathSeparator ~ "b","c","d"], ["e","c","f"], paths, sysIndex);
-    assert(sysIndex == 3);
-    assert(paths == ["a","b","d","e","c","f"]);
+/******************************************
+ * Source text.
+ */
+
+struct Source
+{
+    // Source file
+    ustring input;      // text of the source file
+    Loc loc;            // current location
+    bool isFile;
+    string includeGuard;
+
+    uchar[1000] tmpbuf = void;
+    Textbuf!uchar lineBuffer = void;
+
+    size_t texti;       // index of current position in lineBuffer[]
+
+    void addFile(string fileName, bool isSystem)
+    {
+        loc.srcFile = SrcFile.lookup(fileName);
+        assert(loc.srcFile.filename == fileName);
+        loc.lineNumber = 0;
+        loc.isSystem = isSystem;
+        input = cast(ustring)std.file.read(fileName);
+        isFile = true;
+        includeGuard = null;
+
+        // set new file, set haven't seen tokens yet
+    }
+
+    /***************************
+     * Read next line from input[] and store in lineBuffer[].
+     * Do \ line splicing.
+     */
+    void readLine()
+    {
+        //writefln("Source.readLine() %d", loc.lineNumber);
+        lineBuffer.initialize();
+
+        while (!input.empty)
+        {
+            ++loc.lineNumber;
+            input = input.readLine(lineBuffer);
+            if (lineBuffer.length >= 2 &&
+                lineBuffer[lineBuffer.length - 2] == '\\')
+            {
+                lineBuffer.pop();
+                lineBuffer.pop();
+            }
+            else
+                break;
+        }
+        texti = 0;
+
+        assert(!lineBuffer.length || lineBuffer[lineBuffer.length - 1] == '\n');
+        //writefln("\t%d", loc.lineNumber);
+    }
 }
+
+

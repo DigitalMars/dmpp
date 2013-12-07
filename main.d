@@ -32,9 +32,9 @@ else
         auto context = Context(params);
 
         // Preprocess each file
-        foreach (sourceFilename ; params.sourceFilenames)
+        foreach (i; 0 .. params.sourceFilenames.length)
         {
-            context.localStart(sourceFilename);
+            context.localStart(params.sourceFilenames[i], params.outFilenames[i]);
             context.preprocess();
             context.localFinish();
         }

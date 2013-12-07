@@ -134,3 +134,44 @@ unittest
         assert(p.sysincludes == ["sys1", "sys2"]);
         assert(p.outFilenames == ["out.i"]);
 }
+
+/***********************************
+ * Construct the total search path from the regular include paths and the
+ * system include paths.
+ * Input:
+ *      includePaths    regular include paths
+ *      sysIncludePaths system include paths
+ * Output:
+ *      paths           combined result
+ *      sysIndex        paths[sysIndex] is where the system paths start
+ */
+
+void combineSearchPaths(const string[] includePaths, const string[] sysIncludePaths,
+        out string[] paths, out size_t sysIndex)
+{
+    /* Each element of the paths may contain multiple paths separated by
+     * pathSeparator, so straighten that out
+     */
+    auto incpaths = includePaths.map!(a => splitter(a, pathSeparator)).join;
+    auto syspaths = sysIncludePaths.map!(a => splitter(a, pathSeparator)).join;
+
+    /* Concatenate incpaths[] and syspaths[] into paths[]
+     * but remove from incpaths[] any that are also in syspaths[]
+     */
+    paths = incpaths.filter!((a) => !syspaths.canFind(a)).array;
+    sysIndex = paths.length;
+    paths ~= syspaths;
+
+}
+
+unittest
+{
+    string[] paths;
+    size_t sysIndex;
+
+    combineSearchPaths(["a" ~ pathSeparator ~ "b","c","d"], ["e","c","f"], paths, sysIndex);
+    assert(sysIndex == 3);
+    assert(paths == ["a","b","d","e","c","f"]);
+}
+
+

@@ -50,10 +50,17 @@ struct Textbuf(T)
         return buf[lwr .. upr];
     }
 
+    T[] opSlice()
+    {
+        return buf[0 .. i];
+    }
+
     T opIndex(size_t i)
     {
         return buf[i];
     }
+
+    void initialize() { i = 0; }
 
     T last()
     {
