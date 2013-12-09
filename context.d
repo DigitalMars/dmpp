@@ -51,7 +51,8 @@ struct Context
 
     uchar xc = ' ';
 
-    Expanded expanded;
+    File* fout;         // for expanded (preprocessed) output
+    Expanded!(typeof(File.lockingTextWriter())) expanded;
 
     Loc lastloc;
     bool uselastloc;
@@ -93,7 +94,10 @@ struct Context
         Id.initPredefined();
         foreach (def; params.defines)
             macrosDefine(def);
-        expanded.start(outFilename);
+
+        fout = new File(outFilename, "wb");
+        expanded.start(fout.lockingTextWriter());
+
         auto s = push();
         sourceFilei = sourcei;
         s.addFile(sourceFilename, false);
@@ -119,6 +123,7 @@ struct Context
     void localFinish()
     {
         expanded.finish();
+        delete fout;
     }
 
     /**********

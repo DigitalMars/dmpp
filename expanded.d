@@ -19,7 +19,7 @@ import textbuf;
  * Expanded output.
  */
 
-struct Expanded
+struct Expanded(R)
 {
     Context* ctx;
 
@@ -27,8 +27,7 @@ struct Expanded
     uchar[1000] tmpbuf2 = void;
     Textbuf!uchar lineBuffer = void;
 
-    File* fout;
-    typeof(File.lockingTextWriter()) foutr;
+    R foutr;
 
     int noexpand = 0;
     int lineNumber = 1;                 // line number of expanded output
@@ -42,17 +41,15 @@ struct Expanded
         lineBuffer = Textbuf!uchar(tmpbuf2);
     }
 
-    void start(string outFilename)
+    void start(R foutr)
     {
-        fout = new File(outFilename, "wb");
-        foutr = fout.lockingTextWriter();
+        this.foutr = foutr;
         lineBuffer.initialize();
     }
 
     void finish()
     {
         put('\n');      // cause last line to be flushed to output
-        delete fout;
     }
 
     void put(uchar c)
