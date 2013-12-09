@@ -78,9 +78,12 @@ struct Lexer(R) if (isInputRange!R)
     PPnumber number;
     Id* ident;
 
-    alias Unqual!(ElementEncodingType!R) E;
     R src;
-    BitBucket!E bitbucket;
+
+    alias Unqual!(ElementEncodingType!R) E;
+    BitBucket!E bitbucket = void;
+    EmptyInputRange!E emptyrange = void;
+    enum isContext = hasMember!(R, "expanded");
 
     StaticArrayBuffer!(E, 1024) idbuf = void;
 
@@ -88,6 +91,8 @@ struct Lexer(R) if (isInputRange!R)
 
     void popFront()
     {
+        bool expanded = void;
+
         while (1)
         {
             if (src.empty)
@@ -129,7 +134,7 @@ struct Lexer(R) if (isInputRange!R)
                         switch (src.front)
                         {
                             case '0': .. case '9':
-                                src = src.skipFloat(false, true, false);
+                                src = src.skipFloat(bitbucket, false, true, false);
                                 break;
 
                             case '*':
@@ -381,17 +386,164 @@ struct Lexer(R) if (isInputRange!R)
                 case 'M': .. case 'Q':
                 case 'S': .. case 'T':
                 case 'V': .. case 'Z':
+                    static if (isContext)
+                    {
+                        expanded = src.isExpanded();
+                        src.expanded.popBack();
+                        src.expanded.off();
+                    }
                     idbuf.init();
                     src = src.inIdentifier(idbuf);
                 Lident:
-                    front = TOK.identifier;
-                    return;
+                    static if (!isContext)
+                    {
+                        front = TOK.identifier;
+                        return;
+                    }
+                    else
+                    {
+                        if (expanded && !src.empty && src.isExpanded())
+                            goto Lisident;
+                        auto m = Id.search(idbuf);
+                        if (m && m.flags & Id.IDmacro)
+                        {
+                            assert(!(m.flags & Id.IDinuse));
+
+                            if (m.flags & (Id.IDlinnum | Id.IDfile | Id.IDcounter))
+                            {   // Predefined macro
+                                src.unget();
+                                auto p = ctx.predefined(m);
+                                src.push(p);
+                                src.expanded.on();
+                                src.popFront();
+                                continue;
+                            }
+                            if (!(m.flags & Id.IDfunctionLike))
+                                goto Lisident;
+
+                            /* Scan up to opening '(' of actual argument list
+                             */
+                            E space = 0;
+                            while (1)
+                            {
+                                if (src.empty)
+                                {
+                                    if (space)
+                                    {
+                                        src.expanded.on();
+                                        src.expanded.put(idbuf);
+                                        src.expanded.put(' ');
+                                        front = TOK.identifier;
+                                        return;
+                                    }
+                                    goto Lisident;
+                                }
+                                c = cast(E)src.front;
+                                switch (c)
+                                {
+                                    case ' ':
+                                    case ' ':
+                                    case '\t':
+                                    case '\r':
+                                    case '\n':
+                                    case '\v':
+                                    case '\f':
+                                    case ESC.space:
+                                    case ESC.brk:
+                                        space = c;
+                                        src.popFront();
+                                        continue;
+
+                                    case '/':
+                                        src.popFront();
+                                        if (src.empty)
+                                        {   c = 0;
+                                            goto default;
+                                        }
+                                        c = src.front;
+                                        if (c == '*')
+                                        {
+                                            src.popFront();
+                                            src = src.skipCComment();
+                                            space = ' ';
+                                            continue;
+                                        }
+                                        if (c == '/')
+                                        {
+                                            src.popFront();
+                                            src = src.skipCppComment();
+                                            space = ' ';
+                                            continue;
+                                        }
+                                        src.put('/');
+                                        goto default;
+
+                                    case '(':           // found start of argument list
+                                        src.popFront();
+                                        break;
+
+                                    default:
+                                        src.expanded.on();
+                                        src.expanded.put(idbuf);
+                                        if (space)
+                                            src.expanded.put(space);
+                                        if (c)
+                                            src.put(c);
+                                        front = TOK.identifier;
+                                        return;
+                                }
+                                break;
+                            }
+
+                            ustring[] args;
+                            src = src.macroScanArguments(m.parameters.length,
+                                    !!(m.flags & Id.IDdotdotdot),
+                                     args, emptyrange);
+
+                            auto xcnext = src.front;
+
+                            if (!src.empty)
+                                src.unget();
+
+                            auto p = macroExpandedText(m, args);
+                            auto q = macroRescan(m, p);
+                            if (p.ptr) free(p.ptr);
+
+                            /*
+                             * Insert break if necessary to prevent
+                             * token concatenation.
+                             */
+                            if (!isWhite(xcnext))
+                            {
+                                src.push(ESC.brk);
+                            }
+
+                            src.push(q);
+                            src.setExpanded();
+                            src.expanded.on();
+                            src.expanded.put(ESC.brk);
+                            src.popFront();
+                            continue;
+                        }
+
+                    Lisident:
+                        src.expanded.on();
+                        src.expanded.put(idbuf);
+                        front = TOK.identifier;
+                        return;
+                    }
 
                 case 'L':
                 case 'u':
                 case 'U':
                 case 'R':
                     // string prefixes: L LR u u8 uR u8R U UR R
+                    static if (isContext)
+                    {
+                        expanded = src.isExpanded();
+                        src.expanded.popBack();
+                        src.expanded.off();
+                    }
                     idbuf.init();
                     src = src.inIdentifier(idbuf);
                     if (!src.empty)
@@ -405,6 +557,11 @@ struct Lexer(R) if (isInputRange!R)
                                 case "u8R":
                                 case "uR":
                                 case "UR":
+                                    static if (isContext)
+                                    {
+                                        src.expanded.on();
+                                        src.expanded.put(idbuf);
+                                    }
                                     src.popFront();
                                     src = src.skipRawStringLiteral(bitbucket);
                                     goto Lother;
@@ -413,6 +570,11 @@ struct Lexer(R) if (isInputRange!R)
                                 case "u":
                                 case "u8":
                                 case "U":
+                                    static if (isContext)
+                                    {
+                                        src.expanded.on();
+                                        src.expanded.put(idbuf);
+                                    }
                                     src.popFront();
                                     src = src.skipStringLiteral(bitbucket);
                                     goto Lother;
@@ -431,6 +593,11 @@ struct Lexer(R) if (isInputRange!R)
                                 case "u8":      s = STR.u8; goto Lchar;
                                 case "U":       s = STR.U;  goto Lchar;
                                 Lchar:
+                                    static if (isContext)
+                                    {
+                                        src.expanded.on();
+                                        src.expanded.put(idbuf);
+                                    }
                                     src.popFront();
                                     src = src.lexCharacterLiteral(number.value, s);
                                     number.isunsigned = false;

@@ -14,6 +14,21 @@ struct BitBucket(E)
     static void put(E e) { }
 }
 
+/*****************************************
+ */
+
+struct EmptyInputRange(E)
+{
+    enum bool empty = true;
+
+    enum E front = E.init;
+
+    static void popFront() { assert(0); }
+}
+
+/*****************************************
+ */
+
 struct StaticArrayBuffer(E, size_t N)
 {
     E[N] arr = void;

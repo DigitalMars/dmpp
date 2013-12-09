@@ -16,6 +16,7 @@ import std.array;
 import std.ascii;
 import std.range;
 import std.stdio;
+import std.traits;
 
 import main;
 import skip;
@@ -664,7 +665,7 @@ uchar[] macroExpandedText(Id* m, ustring[] args)
             //writefln("\targ[%s] = '%s'", argi, a);
             if (expand)
             {
-                auto s = macro_expand(a);
+                auto s = macroExpand(a);
                 auto t = trimEscWhiteSpace(s);
                 buffer.put(t);
                 if (s.ptr) free(cast(void*)s.ptr);
@@ -701,14 +702,285 @@ uchar[] macroExpandedText(Id* m, ustring[] args)
 
 
 /*****************************************
- * Return copied string which is a fully macro expanded text.
- * Returns:
- *      ustring that must be free'd
+ * Take string text, fully macro expand it, and return the result.
  */
 
-uchar[] macro_expand(ustring text)
+uchar[] macroExpand(const(uchar)[] text)
+{
+version (none)
+{
+    alias uchar E;
+
+    uchar[128] tmpbuf = void;
+    auto outbuf = Textbuf!uchar(tmpbuf);
+
+    auto ctx = getContext();
+    auto r = ctx;
+
+    r.expanded.off();
+    r.push(text);
+    r.popFront();
+
+  Louter:
+    while (!r.empty)
+    {
+        auto c = r.front;
+        switch (c)
+        {
+            case '"':
+                /* Skip over character literals and string literals without
+                 * examining their insides
+                 */
+                r.popFront();
+                if (outbuf.length && outbuf.last() == 'R')
+                {
+                    outbuf.put(c);
+                    r = r.skipRawStringLiteral(outbuf);
+                }
+                else
+                {
+                    outbuf.put(c);
+                    r = r.skipStringLiteral(outbuf);
+                }
+                continue;
+
+            case '\'':
+                r.popFront();
+                outbuf.put(c);
+                r = r.skipCharacterLiteral(outbuf);
+                continue;
+
+            case ESC.expand:
+                r.popFront();
+                outbuf.put(c);
+                c = r.front;
+                if (isIdentifierStart(c))
+                {
+                    r = r.inIdentifier(outbuf);
+                    continue;
+                }
+                r.popFront();
+                break;
+
+            case 0:
+                goto Ldone;
+
+            case '0': .. case '9':
+            case '.':
+                r = r.skipFloat(outbuf, false, false, false);
+                continue;
+
+            default:
+                if (isIdentifierStart(c))
+                {
+                    auto expanded = r.isExpanded();
+                    size_t len = outbuf.length;
+                    r = r.inIdentifier(outbuf);
+                    if (expanded && !r.empty && r.isExpanded())
+                    {
+                        continue;
+                    }
+                    auto id = outbuf[len .. outbuf.length];
+
+
+                    /* If it is actually a string literal prefix
+                     */
+                    if (!r.empty)
+                    {
+                        E q = cast(E)r.front;
+                        if (q == '"' || q == '\'')
+                        {
+                            switch (cast(string)id)
+                            {
+                                case "LR":
+                                case "R":
+                                case "u8R":
+                                case "uR":
+                                case "UR":
+                                    if (q == '"')
+                                    {
+                                        r.popFront();
+                                        r = r.skipRawStringLiteral(outbuf);
+                                        continue;
+                                    }
+                                    break;
+
+                                case "L":
+                                case "u":
+                                case "u8":
+                                case "U":
+                                    if (q == '"')
+                                    {
+                                        r.popFront();
+                                        r = r.skipStringLiteral(outbuf);
+                                        continue;
+                                    }
+                                    if (q == '\'')
+                                    {
+                                        r.popFront();
+                                        r = r.skipCharacterLiteral(outbuf);
+                                        continue;
+                                    }
+                                    break;
+
+                                default:
+                                    break;
+                            }
+                        }
+                    }
+
+
+                    // Determine if tok_ident[] is a macro
+                    auto m = Id.search(id);
+                    if (m && m.flags & Id.IDmacro)
+                    {
+                        if (m.flags & Id.IDinuse)
+                        {
+                            // Mark this identifier as being disabled
+                            outbuf.put(ESC.expand);
+                            outbuf.put(m.name);
+                            continue;
+                        }
+                        if (m.flags & (Id.IDlinnum | Id.IDfile | Id.IDcounter))
+                        {   // Predefined macro
+                            outbuf.setLength(len);      // remove id from outbuf
+                            r.unget();
+                            auto p = ctx.predefined(m);
+                            r.push(p);
+                            r.popFront();
+                            continue;
+                        }
+                        if (!(m.flags & Id.IDfunctionLike))
+                            continue;
+
+                        /* Scan up to opening '(' of actual argument list
+                         */
+                        E space = 0;
+                        while (1)
+                        {
+                            if (r.empty)
+                                continue Louter;
+                            c = cast(E)r.front;
+                            switch (c)
+                            {
+                                case ' ':
+                                case ' ':
+                                case '\t':
+                                case '\r':
+                                case '\n':
+                                case '\v':
+                                case '\f':
+                                case ESC.space:
+                                case ESC.brk:
+                                    space = c;
+                                    r.popFront();
+                                    continue;
+
+                                case '/':
+                                    r.popFront();
+                                    if (r.empty)
+                                        break;
+                                    c = r.front;
+                                    if (c == '*')
+                                    {
+                                        r.popFront();
+                                        r = r.skipCComment();
+                                        space = ' ';
+                                        continue;
+                                    }
+                                    if (c == '/')
+                                    {
+                                        r.popFront();
+                                        r = r.skipCppComment();
+                                        space = ' ';
+                                        continue;
+                                    }
+                                    if (space)
+                                        outbuf.put(space);
+                                    outbuf.put('/');
+                                    outbuf.put(c);
+                                    continue Louter;
+
+                                case '(':               // found start of argument list
+                                    r.popFront();
+                                    break;
+
+                                default:
+                                    if (space)
+                                        outbuf.put(space);
+                                    outbuf.put(c);
+                                    continue Louter;
+                            }
+                            break;
+                        }
+
+                        outbuf.setLength(len);
+                        ustring[] args;
+                        r = r.macroScanArguments(m.parameters.length,
+                                !!(m.flags & Id.IDdotdotdot),
+                                 args, ctx);
+
+                        auto xcnext = r.front;
+
+                        if (!r.empty)
+                            r.unget();
+
+                        auto p = macroExpandedText(m, args);
+                        auto q = macroRescan(m, p);
+                        if (p.ptr) free(p.ptr);
+
+                        /*
+                         * Insert break if necessary to prevent
+                         * token concatenation.
+                         */
+                        if (!isWhite(xcnext))
+                        {
+                            r.push(ESC.brk);
+                        }
+
+                        r.push(q);
+                        r.setExpanded();
+                        r.push(ESC.brk);
+                        r.popFront();
+                    }
+                    continue;
+                }
+                else
+                    r.popFront();
+                break;
+        }
+        outbuf.put(c);
+    }
+
+Ldone:
+    r.expanded.on();
+    return outbuf[0 .. outbuf.length].dup;
+}
+else
 {
     return text.dup;
+}
+}
+
+
+/***********************************************
+ * Rescan already expanded macro text for more substitutions.
+ */
+
+uchar[] macroRescan(Id* m, const(uchar)[] text)
+{
+    m.flags |= Id.IDinuse;
+    auto r = macroExpand(text);
+    r = r.trimWhiteSpace();
+    m.flags &= ~Id.IDinuse;
+
+    if (r.empty)
+    {
+        uchar*p = cast(uchar*)malloc(1);
+        assert(p);
+        r = p[0 .. 1];
+    }
+    return r;
 }
 
 
@@ -724,13 +996,13 @@ uchar[] macro_expand(ustring text)
  *      r past closing )
  */
 
-R macroScanArguments(R)(R r, size_t nparameters, bool variadic, out ustring[] args)
+R macroScanArguments(R, S)(R r, size_t nparameters, bool variadic, out ustring[] args, ref S s)
 {
     bool va_args = variadic && (args.length + 1 == nparameters);
     while (1)
     {
         ustring arg;
-        r = r.macroScanArgument(va_args, arg);
+        r = r.macroScanArgument(va_args, arg, s);
         args ~= arg;
 
         va_args = variadic && (args.length + 1 == nparameters);
@@ -766,16 +1038,18 @@ R macroScanArguments(R)(R r, size_t nparameters, bool variadic, out ustring[] ar
 
 unittest
 {
+    EmptyInputRange!uchar empty;
+
     ustring s;
     ustring[] args;
     s = "ab,cd )a";
-    auto r = s.macroScanArguments(2, false, args);
+    auto r = s.macroScanArguments(2, false, args, empty);
 //writefln("'%s', %s", args, args.length);
     assert(!r.empty && r.front == 'a');
     assert(args == ["ab","cd"]);
 
     s = "ab )a";
-    r = s.macroScanArguments(2, true, args);
+    r = s.macroScanArguments(2, true, args, empty);
 //writefln("'%s', %s", args, args.length);
     assert(!r.empty && r.front == 'a');
     assert(args == ["ab",""]);
@@ -784,22 +1058,47 @@ unittest
 /*****************************************
  * Read in macro actual argument.
  * Input:
- *      r       input range at start of arg
+ *      r1      input range at start of arg
  *      va_args if scanning argument for __VA_ARGS__
+ *      s       supplemental range if s1 runs out
  * Output:
  *      arg     malloc'd copy of the scanned argument
  * Returns:
- *      range set past end of argument
+ *      r1 set past end of argument
  */
 
-R macroScanArgument(R)(R r, bool va_args, out ustring arg)
+R macroScanArgument(R, S)(R r1, bool va_args, out ustring arg, ref S s)
 {
-    int parens;
+    alias Unqual!(ElementEncodingType!R) E;
+
+    struct Chain
+    {
+        @property bool empty()
+        {
+            return r1.empty && s.empty;
+        }
+
+        @property E front()
+        {
+            return r1.empty ? cast(E)s.front : cast(E)r1.front;
+        }
+
+        void popFront()
+        {
+            if (r1.empty)
+                s.popFront();
+            else
+                r1.popFront();
+        }
+    }
+
+    Chain r;
 
     uchar[1000] tmpbuf = void;
     auto outbuf = Textbuf!uchar(tmpbuf);
     outbuf.put(0);
 
+    int parens;
     while (1)
     {
         if (r.empty)
@@ -876,54 +1175,57 @@ R macroScanArgument(R)(R r, bool va_args, out ustring arg)
         r.popFront();
     }
     err_fatal("premature end of macro argument");
-    return r;
+    return r1;
 
   LendOfArg:
     auto len = outbuf.length - 1;
-    auto s = cast(uchar *)malloc(len);
-    assert(s);
-    memcpy(s, outbuf[1 .. len + 1].ptr, len);
-    //writefln("\targ = '%s'", s[0 .. len]);
-    arg = cast(ustring)s[0 .. len];
-    return r;
+    auto str = cast(uchar *)malloc(len);
+    assert(str);
+    memcpy(str, outbuf[1 .. len + 1].ptr, len);
+    //writefln("\targ = '%s'", str[0 .. len]);
+    arg = cast(ustring)str[0 .. len];
+    return r1;
 }
 
 unittest
 {
+    EmptyInputRange!uchar uempty;
+    EmptyInputRange!char  empty;
+
     ustring s = " \t\r\n\v\f /**/ //
  )a";
     ustring arg;
-    auto r = s.macroScanArgument(false, arg);
+    auto r = s.macroScanArgument(false, arg, uempty);
     assert(!r.empty && r.front == ')');
     assert(arg == "");
 
     s = " ((,)) )a";
-    r = s.macroScanArgument(false, arg);
+    r = s.macroScanArgument(false, arg, empty);
     assert(!r.empty && r.front == ')');
     assert(arg == " ((,))");
 
     s = "ab,cd )a";
-    r = s.macroScanArgument(false, arg);
+    r = s.macroScanArgument(false, arg, empty);
     assert(!r.empty && r.front == ',');
     assert(arg == "ab");
 
     s = "ab,cd )a";
-    r = s.macroScanArgument(true, arg);
+    r = s.macroScanArgument(true, arg, empty);
     assert(!r.empty && r.front == ')');
     assert(arg == "ab,cd");
 
     s = "a'b',cd )a";
-    r = s.macroScanArgument(false, arg);
+    r = s.macroScanArgument(false, arg, empty);
     assert(!r.empty && r.front == ',');
     assert(arg == "a'b'");
 
     s = `a"b",cd )a`;
-    r = s.macroScanArgument(false, arg);
+    r = s.macroScanArgument(false, arg, empty);
     assert(!r.empty && r.front == ',');
     assert(arg == `a"b"`);
 
     s = `aR"x(b")x",cd )a`;
-    r = s.macroScanArgument(false, arg);
+    r = s.macroScanArgument(false, arg, empty);
 //writefln("|%s|, %s", arg, arg.length);
     assert(!r.empty && r.front == ',');
     assert(arg == `aR"x(b")x"`);
@@ -1081,4 +1383,50 @@ unittest
     buf.writePreprocessedLine(s);
 //writefln("|%s| %s", buf[], buf[].length);
     assert(buf[] == "+ +(\n");
+}
+
+/**************************************************
+ * Define macro of the form:
+ *      name
+ *      name=definition
+ *      name(parameters)=definition
+ *
+ * Input:
+ *      def     macro
+ */
+
+void macrosDefine(ustring def)
+{
+    ustring id;
+    ustring[] parameters;
+    ustring text;
+
+    BitBucket!uchar bitbucket = void;
+
+    id = def;
+    def = def.inIdentifier(bitbucket);
+    id = id[0 .. $ - def.length];
+    if (def.empty)
+        text = cast(ustring)"1";
+    else
+    {
+        auto c = def.front;
+        def.popFront();
+        if (c == '(')
+        {
+            goto Lerror;
+        }
+        if (c == '=')
+            text = def;
+    }
+
+    auto m = Id.defineMacro(id, parameters, text, Id.IDpredefined);
+    if (!m)
+    {
+        err_fatal("redefinition of macro %s", id);
+    }
+    return;
+
+Lerror:
+    err_fatal("malformed macro definition");
 }

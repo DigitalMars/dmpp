@@ -8,6 +8,9 @@
 
 module context;
 
+import core.stdc.stdio;
+import core.stdc.stdlib;
+
 import std.algorithm;
 import std.array;
 import std.path;
@@ -17,6 +20,7 @@ import std.traits;
 
 import cmdline;
 import expanded;
+import id;
 import loc;
 import macros;
 import main;
@@ -35,6 +39,7 @@ struct Context
     size_t sysIndex;    // paths[sysIndex] is start of system #includes
 
     bool errors;        // true if any errors occurred
+    uint counter;       // for __COUNTER__
 
     bool doDeps;        // true if doing dependency file generation
     char[] deps;        // dependency file contents
@@ -49,6 +54,8 @@ struct Context
 
     Loc lastloc;
     bool uselastloc;
+
+    __gshared Context *_ctx;            // shameful use of global variable
 
     /******
      * Construct global context from the command line parameters
@@ -66,6 +73,13 @@ struct Context
         }
 
         expanded.initialize(&this);
+
+        _ctx = &this;
+    }
+
+    Context* getContext()
+    {
+        return _ctx;
     }
 
     /**********
@@ -74,6 +88,10 @@ struct Context
     void localStart(string sourceFilename, string outFilename)
     {
         writefln("from %s to %s", sourceFilename, outFilename);
+        Id.defineMacro(cast(ustring)"__BASE_FILE__", null, cast(ustring)sourceFilename, Id.IDpredefined);
+        Id.initPredefined();
+        foreach (def; params.defines)
+            macrosDefine(def);
         expanded.start(outFilename);
         auto s = push();
         sourceFilei = sourcei;
@@ -199,6 +217,39 @@ struct Context
         }
         --sourcei;
         return sourcei == -1 ? null : &sources[sourcei];
+    }
+
+    /***************************
+     * Return text associated with predefined macro.
+     */
+    ustring predefined(Id* m)
+    {
+        auto s = currentSourceFile();
+        if (!s)
+            return null;
+        uint n;
+
+        switch (m.flags & (Id.IDlinnum | Id.IDfile | Id.IDcounter))
+        {
+            case Id.IDlinnum:
+                n = s.loc.lineNumber;
+                break;
+
+            case Id.IDfile:
+                return s.loc.srcFile.filename;
+
+            case Id.IDcounter:
+                n = counter++;
+                break;
+
+            default:
+                assert(0);
+        }
+        auto p = cast(uchar*)malloc(counter.sizeof * 3 + 1);
+        assert(p);
+        auto len = sprintf(cast(char*)p, "%u", n);
+        assert(len > 0);
+        return cast(ustring)p[0 .. len];
     }
 }
 

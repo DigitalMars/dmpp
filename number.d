@@ -17,6 +17,7 @@ import std.traits;
 
 import lexer : ppint_t, ppuint_t;
 import main : err_fatal;
+import ranges : BitBucket;
 
 /******************************
  * Lex a number.
@@ -33,6 +34,8 @@ import main : err_fatal;
 R lexNumber(R)(R r, out ppint_t result, out bool isunsigned, out bool isinteger) if (isInputRange!R)
 {
     alias Unqual!(ElementEncodingType!R) E;
+
+    BitBucket!E bitbucket = void;
 
     isinteger = true;
     int radix = 10;
@@ -64,13 +67,13 @@ R lexNumber(R)(R r, out ppint_t result, out bool isunsigned, out bool isinteger)
                 break;
 
             case '.':
-                r = r.skipFloat(false, false, false);
+                r = r.skipFloat(bitbucket, false, false, false);
                 isinteger = false;
                 return r;
 
             case 'e':
             case 'E':
-                r = r.skipFloat(false, false, true);
+                r = r.skipFloat(bitbucket, false, false, true);
                 isinteger = false;
                 return r;
 
@@ -122,12 +125,12 @@ R lexNumber(R)(R r, out ppint_t result, out bool isunsigned, out bool isinteger)
             case 'p':
             case 'P':
             Lsawexponent:
-                r = r.skipFloat(radix == 16, false, true);
+                r = r.skipFloat(bitbucket, radix == 16, false, true);
                 isinteger = false;
                 return r;
 
             case '.':
-                r = r.skipFloat(radix == 16, false, false);
+                r = r.skipFloat(bitbucket, radix == 16, false, false);
                 isinteger = false;
                 return r;
 
@@ -271,7 +274,8 @@ unittest
  * Skip over floating point number.
  */
 
-R skipFloat(R)(R r, bool hex, bool sawdot, bool isexponent) if (isInputRange!R)
+R skipFloat(R, S)(R r, ref S s, bool hex, bool sawdot, bool isexponent)
+        if (isInputRange!R && isOutputRange!(S, ElementEncodingType!R))
 {
     alias Unqual!(ElementEncodingType!R) E;
 
@@ -291,11 +295,13 @@ R skipFloat(R)(R r, bool hex, bool sawdot, bool isexponent) if (isInputRange!R)
     // Leading '0x'
     if (c == '0')
     {
+        s.put(c);
         if (r.empty)
             goto Lreturn;
         c = get();
         if (c == 'x' || c == 'X')
         {
+            s.put(c);
             hex = true;
             if (r.empty)
             {
@@ -311,6 +317,7 @@ R skipFloat(R)(R r, bool hex, bool sawdot, bool isexponent) if (isInputRange!R)
     {
         if (c == '.')
         {
+            s.put(c);
             if (r.empty)
                 goto Lreturn;
             c = get();
@@ -318,6 +325,7 @@ R skipFloat(R)(R r, bool hex, bool sawdot, bool isexponent) if (isInputRange!R)
         }
         if (isDigit(c) || (hex && isHexDigit(c)))
         {
+            s.put(c);
             if (r.empty)
                 goto Lreturn;
             c = get();
@@ -333,6 +341,7 @@ Lsawdot:
     {
         if (isDigit(c) || (hex && isHexDigit(c)))
         {
+            s.put(c);
             if (r.empty)
                 goto Lreturn;
             c = get();
@@ -344,6 +353,7 @@ Lsawdot:
 Lisexponent:
     if (c == 'e' || c == 'E' || (hex && (c == 'p' || c == 'P')))
     {
+        s.put(c);
         if (r.empty)
         {
             err_fatal("exponent digits missing");
@@ -352,6 +362,7 @@ Lisexponent:
         c = get();
         if (c == '-' || c == '+')
         {
+            s.put(c);
             if (r.empty)
             {
                 err_fatal("exponent digits missing");
@@ -364,6 +375,7 @@ Lisexponent:
         {
             if (isDigit(c) || (hex && isHexDigit(c)))
             {
+                s.put(c);
                 anyexp = true;
                 if (r.empty)
                     goto Lreturn;
@@ -380,6 +392,7 @@ Lisexponent:
 
     if (c == 'f' || c == 'F' || c == 'l' || c == 'L')
     {
+        s.put(c);
         if (r.empty)
             goto Lreturn;
         c = get();
@@ -391,6 +404,8 @@ Lreturn:
 
 unittest
 {
+    BitBucket!char bitbucket = void;
+
     string[] cases = ["", "0", "1", "55.", "2.3", "0.0E+2", "0.0e-150", "0E03",
         "2.7l", "3.2L ", "5.6e1f", "125.1234F",
         "0x12abcdefABCDEFp+20", "0x9.aP-10"
@@ -398,17 +413,17 @@ unittest
 
     foreach (s; cases)
     {
-        s = s.skipFloat(false, false, false);
+        s = s.skipFloat(bitbucket, false, false, false);
         assert(s.empty);
     }
 
     string s;
 
     s = "123";
-    s = s.skipFloat(false, true, false);
+    s = s.skipFloat(bitbucket, false, true, false);
     assert(s.empty);
 
     s = "e123";
-    s = s.skipFloat(false, false, true);
+    s = s.skipFloat(bitbucket, false, false, true);
     assert(s.empty);
 }

@@ -77,6 +77,11 @@ struct Textbuf(T)
         return i;
     }
 
+    void setLength(size_t i)
+    {
+        this.i = i;
+    }
+
     /**************************
      * Release any malloc'd data.
      */

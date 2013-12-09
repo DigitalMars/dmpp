@@ -9,6 +9,9 @@
 
 module id;
 
+import core.stdc.stdio;
+import core.stdc.time;
+
 import main;
 
 /******************************
@@ -32,7 +35,7 @@ struct Id
      * Returns:
      *  Id*  if it is, null if not
      */
-    static Id* search(ustring name)
+    static Id* search(const(uchar)[] name)
     {
         auto p = name in table;
         return p ? *p : null;
@@ -84,7 +87,8 @@ struct Id
         IDmacro      = 1,       // it's a macro in good standing
         IDdotdotdot  = 2,       // the macro has a ...
         IDfunctionLike = 4,     // the macro has ( ), i.e. is function-like
-        IDpredefined = 8,       // the macro is specially predefined
+        IDpredefined = 8,       // the macro is predefined and cannot be #undef'd
+        IDinuse      = 0x800_0000,      // macro is currently being expanded
 
         // Pragmas
         IDif         = 0x10,
@@ -119,4 +123,29 @@ struct Id
 
     ustring text;         // replacement text of the macro
     ustring[] parameters; // macro parameters
+
+    /* Initialize the predefined macros
+     */
+    static void initPredefined()
+    {
+        defineMacro(cast(ustring)"__FILE__", null, null, IDpredefined | IDfile);
+        defineMacro(cast(ustring)"__LINE__", null, null, IDpredefined | IDlinnum);
+        defineMacro(cast(ustring)"__COUNTER__", null, null, IDpredefined | IDcounter);
+
+        char[1+26+1] date;
+        time_t t;
+
+        time(&t);
+        auto p = ctime(&t);
+        assert(p);
+
+        auto len = sprintf(date.ptr,"\"%.24s\"",p);
+        defineMacro(cast(ustring)"__TIMESTAMP__", null, date[0..len].idup, IDpredefined);
+
+        len = sprintf(date.ptr,"\"%.6s %.4s\"",p+4,p+20);
+        defineMacro(cast(ustring)"__DATE__", null, date[0..len].idup, IDpredefined);
+
+        len = sprintf(date.ptr,"\"%.8s\"",p+11);
+        defineMacro(cast(ustring)"__TIME__", null, date[0..len].idup, IDpredefined);
+    }
 }
