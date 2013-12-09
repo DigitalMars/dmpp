@@ -26,6 +26,7 @@ import macros;
 import main;
 import textbuf;
 import sources;
+import directive;
 
 /*********************************
  * Keep the state of the preprocessor in this struct.

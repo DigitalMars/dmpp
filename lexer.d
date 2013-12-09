@@ -58,6 +58,8 @@ enum TOK
     lparen,
     rparen,
     defined,
+    dotdotdot,
+    assign,
 
     integer,
     identifier,
@@ -146,7 +148,8 @@ struct Lexer(R) if (isInputRange!R)
                                 if (!src.empty && src.front == '.')
                                 {
                                     src.popFront();
-                                    goto Lother;
+                                    front = TOK.dotdotdot;
+                                    return;
                                 }
                                 break;
 
@@ -175,7 +178,8 @@ struct Lexer(R) if (isInputRange!R)
                         front = TOK.equal;
                         return;
                     }
-                    goto Lother;
+                    front = TOK.assign;
+                    return;
 
                 case '<':
                     src.popFront();
@@ -764,7 +768,7 @@ unittest
     lexer.popFront();
     assert(lexer.front == TOK.shl);
     lexer.popFront();
-    assert(lexer.front == TOK.other);
+    assert(lexer.front == TOK.assign);
     lexer.popFront();
     assert(lexer.front == TOK.equal);
     lexer.popFront();
@@ -776,7 +780,7 @@ unittest
     lexer.popFront();
     assert(lexer.front == TOK.other);
     lexer.popFront();
-    assert(lexer.front == TOK.other);
+    assert(lexer.front == TOK.dotdotdot);
     lexer.popFront();
     assert(lexer.front == TOK.other);
     lexer.popFront();
