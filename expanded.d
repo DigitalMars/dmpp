@@ -119,7 +119,7 @@ struct Expanded(R)
     void put(ustring s)
     {
         foreach (uchar c; s)
-            put(s);
+            put(c);
     }
 
     /*******************

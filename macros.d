@@ -18,11 +18,13 @@ import std.range;
 import std.stdio;
 import std.traits;
 
+import context;
+import id;
 import main;
+import number;
+import ranges;
 import skip;
 import textbuf;
-import id;
-import ranges;
 
 bool isIdentifierStart(uchar c)
 {
@@ -505,7 +507,7 @@ ustring getIthArg(ustring[] args, size_t argi)
  *      malloc'd ustring
  */
 
-uchar[] macroExpandedText(Id* m, ustring[] args)
+uchar[] macroExpandedText(Context)(Id* m, ustring[] args)
 {
     version (none)
     {
@@ -665,7 +667,7 @@ uchar[] macroExpandedText(Id* m, ustring[] args)
             //writefln("\targ[%s] = '%s'", argi, a);
             if (expand)
             {
-                auto s = macroExpand(a);
+                auto s = macroExpand!Context(a);
                 auto t = trimEscWhiteSpace(s);
                 buffer.put(t);
                 if (s.ptr) free(cast(void*)s.ptr);
@@ -705,21 +707,23 @@ uchar[] macroExpandedText(Id* m, ustring[] args)
  * Take string text, fully macro expand it, and return the result.
  */
 
-uchar[] macroExpand(const(uchar)[] text)
-{
-version (none)
+uchar[] macroExpand(Context)(const(uchar)[] text)
 {
     alias uchar E;
 
     uchar[128] tmpbuf = void;
     auto outbuf = Textbuf!uchar(tmpbuf);
 
-    auto ctx = getContext();
-    auto r = ctx;
+    auto ctx = Context.getContext();
+    ctx.expanded.off();
 
-    r.expanded.off();
-    r.push(text);
-    r.popFront();
+    auto rc = Context(ctx.params);
+
+    rc.expanded.off();
+    rc.push(text);
+    rc.popFront();
+
+    auto r = &rc;
 
   Louter:
     while (!r.empty)
@@ -864,7 +868,6 @@ version (none)
                             switch (c)
                             {
                                 case ' ':
-                                case ' ':
                                 case '\t':
                                 case '\r':
                                 case '\n':
@@ -925,8 +928,8 @@ version (none)
                         if (!r.empty)
                             r.unget();
 
-                        auto p = macroExpandedText(m, args);
-                        auto q = macroRescan(m, p);
+                        auto p = macroExpandedText!Context(m, args);
+                        auto q = macroRescan!Context(m, p);
                         if (p.ptr) free(p.ptr);
 
                         /*
@@ -953,13 +956,10 @@ version (none)
     }
 
 Ldone:
-    r.expanded.on();
+    // Restore previous context
+    ctx.setContext();
+    ctx.expanded.on();
     return outbuf[0 .. outbuf.length].dup;
-}
-else
-{
-    return text.dup;
-}
 }
 
 
@@ -967,10 +967,10 @@ else
  * Rescan already expanded macro text for more substitutions.
  */
 
-uchar[] macroRescan(Id* m, const(uchar)[] text)
+uchar[] macroRescan(Context)(Id* m, const(uchar)[] text)
 {
     m.flags |= Id.IDinuse;
-    auto r = macroExpand(text);
+    auto r = macroExpand!Context(text);
     r = r.trimWhiteSpace();
     m.flags &= ~Id.IDinuse;
 

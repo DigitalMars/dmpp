@@ -87,7 +87,9 @@ struct Lexer(R) if (isInputRange!R)
     alias Unqual!(ElementEncodingType!R) E;
     BitBucket!E bitbucket = void;
     EmptyInputRange!E emptyrange = void;
-    enum isContext = hasMember!(R, "expanded");
+
+    //enum bool isContext = std.traits.hasMember!(R, "expanded");
+    enum bool isContext = __traits(compiles, src.expanded);
 
     StaticArrayBuffer!(E, 1024) idbuf = void;
 
@@ -95,6 +97,8 @@ struct Lexer(R) if (isInputRange!R)
 
     void popFront()
     {
+        //writefln("isContext %s, %s", isContext, __traits(compiles, src.expanded));
+
         bool expanded = void;
 
         while (1)
@@ -401,6 +405,7 @@ struct Lexer(R) if (isInputRange!R)
                     idbuf.init();
                     src = src.inIdentifier(idbuf);
                 Lident:
+writefln("test1 %s", idbuf[]);
                     static if (!isContext)
                     {
                         front = TOK.identifier;
@@ -408,11 +413,15 @@ struct Lexer(R) if (isInputRange!R)
                     }
                     else
                     {
+writeln("test2");
                         if (expanded && !src.empty && src.isExpanded())
                             goto Lisident;
+writeln("test3");
                         auto m = Id.search(idbuf[]);
+writeln(m);
                         if (m && m.flags & Id.IDmacro)
                         {
+writeln("test4");
                             assert(!(m.flags & Id.IDinuse));
 
                             if (m.flags & (Id.IDlinnum | Id.IDfile | Id.IDcounter))
@@ -424,94 +433,93 @@ struct Lexer(R) if (isInputRange!R)
                                 src.popFront();
                                 continue;
                             }
-                            if (!(m.flags & Id.IDfunctionLike))
-                                goto Lisident;
-
-                            /* Scan up to opening '(' of actual argument list
-                             */
-                            E space = 0;
-                            while (1)
-                            {
-                                if (src.empty)
-                                {
-                                    if (space)
-                                    {
-                                        src.expanded.on();
-                                        src.expanded.put(idbuf[]);
-                                        src.expanded.put(' ');
-                                        front = TOK.identifier;
-                                        return;
-                                    }
-                                    goto Lisident;
-                                }
-                                c = cast(E)src.front;
-                                switch (c)
-                                {
-                                    case ' ':
-                                    case '\t':
-                                    case '\r':
-                                    case '\n':
-                                    case '\v':
-                                    case '\f':
-                                    case ESC.space:
-                                    case ESC.brk:
-                                        space = c;
-                                        src.popFront();
-                                        continue;
-
-                                    case '/':
-                                        src.popFront();
-                                        if (src.empty)
-                                        {   c = 0;
-                                            goto default;
-                                        }
-                                        c = src.front;
-                                        if (c == '*')
-                                        {
-                                            src.popFront();
-                                            src = src.skipCComment();
-                                            space = ' ';
-                                            continue;
-                                        }
-                                        if (c == '/')
-                                        {
-                                            src.popFront();
-                                            src = src.skipCppComment();
-                                            space = ' ';
-                                            continue;
-                                        }
-                                        src.push('/');
-                                        goto default;
-
-                                    case '(':           // found start of argument list
-                                        src.popFront();
-                                        break;
-
-                                    default:
-                                        src.expanded.on();
-                                        src.expanded.put(idbuf[]);
-                                        if (space)
-                                            src.expanded.put(space);
-                                        if (c)
-                                            src.push(c);
-                                        front = TOK.identifier;
-                                        return;
-                                }
-                                break;
-                            }
-
                             ustring[] args;
-                            src = src.macroScanArguments(m.parameters.length,
-                                    !!(m.flags & Id.IDdotdotdot),
-                                     args, emptyrange);
+                            if (m.flags & Id.IDfunctionLike)
+                            {
+                                /* Scan up to opening '(' of actual argument list
+                                 */
+                                E space = 0;
+                                while (1)
+                                {
+                                    if (src.empty)
+                                    {
+                                        if (space)
+                                        {
+                                            src.expanded.on();
+                                            src.expanded.put(idbuf[]);
+                                            src.expanded.put(' ');
+                                            front = TOK.identifier;
+                                            return;
+                                        }
+                                        goto Lisident;
+                                    }
+                                    c = cast(E)src.front;
+                                    switch (c)
+                                    {
+                                        case ' ':
+                                        case '\t':
+                                        case '\r':
+                                        case '\n':
+                                        case '\v':
+                                        case '\f':
+                                        case ESC.space:
+                                        case ESC.brk:
+                                            space = c;
+                                            src.popFront();
+                                            continue;
 
+                                        case '/':
+                                            src.popFront();
+                                            if (src.empty)
+                                            {   c = 0;
+                                                goto default;
+                                            }
+                                            c = src.front;
+                                            if (c == '*')
+                                            {
+                                                src.popFront();
+                                                src = src.skipCComment();
+                                                space = ' ';
+                                                continue;
+                                            }
+                                            if (c == '/')
+                                            {
+                                                src.popFront();
+                                                src = src.skipCppComment();
+                                                space = ' ';
+                                                continue;
+                                            }
+                                            src.push('/');
+                                            goto default;
+
+                                        case '(':           // found start of argument list
+                                            src.popFront();
+                                            break;
+
+                                        default:
+                                            src.expanded.on();
+                                            src.expanded.put(idbuf[]);
+                                            if (space)
+                                                src.expanded.put(space);
+                                            if (c)
+                                                src.push(c);
+                                            front = TOK.identifier;
+                                            return;
+                                    }
+                                    break;
+                                }
+
+                                src = src.macroScanArguments(m.parameters.length,
+                                        !!(m.flags & Id.IDdotdotdot),
+                                         args, emptyrange);
+                            }
                             auto xcnext = src.front;
 
                             if (!src.empty)
                                 src.unget();
 
-                            auto p = macroExpandedText(m, args);
-                            auto q = macroRescan(m, p);
+                            auto p = macroExpandedText!(typeof(*src))(m, args);
+                            auto q = macroRescan!(typeof(*src))(m, p);
                             //if (p.ptr) free(p.ptr);
 
                             /*

@@ -59,7 +59,7 @@ struct Context(R)
     Loc lastloc;
     bool uselastloc;
 
-    __gshared Context *_ctx;            // shameful use of global variable
+    __gshared Context* _ctx;            // shameful use of global variable
 
     /******
      * Construct global context from the command line parameters
@@ -77,13 +77,17 @@ struct Context(R)
         }
 
         expanded.initialize(&this);
-
-        _ctx = &this;
+        setContext();
     }
 
-    Context* getContext()
+    static Context* getContext()
     {
         return _ctx;
+    }
+
+    void setContext()
+    {
+        _ctx = &this;
     }
 
     /**********
@@ -117,6 +121,7 @@ struct Context(R)
         while (!lexer.empty)
         {
             auto tok = lexer.front;
+writeln(tok);
             lexer.popFront();
             if (tok == TOK.eof)
                 break;
@@ -189,12 +194,18 @@ struct Context(R)
 
     void push(uchar c)
     {
+        auto s = push();
+        s.lineBuffer.initialize();
+        s.lineBuffer.put(c);
+        s.texti = 0;
     }
 
-    void push(const(uchar)[] s)
+    void push(const(uchar)[] str)
     {
-        foreach (uchar c; s)
-            push(c);
+        auto s = push();
+        s.lineBuffer.initialize();
+        s.lineBuffer.put(str);
+        s.texti = 0;
     }
 
     Source* currentSourceFile()
@@ -322,17 +333,17 @@ R readLine(R, S)(R r, ref S s)
 
 struct Source
 {
-    // Source file
-    ustring input;      // text of the source file
+    // These are if isFile is true
     Loc loc;            // current location
-    bool isFile;
+    ustring input;      // remaining file contents
     string includeGuard;
 
-    uchar[1000] tmpbuf = void;
+    uchar[16] tmpbuf = void;
     Textbuf!uchar lineBuffer = void;
 
     size_t texti;       // index of current position in lineBuffer[]
 
+    bool isFile;        // if it is a file
     bool isExpanded;    // true if already macro expanded
 
     void addFile(SrcFile* sf, bool isSystem)
@@ -381,9 +392,8 @@ struct Source
 
 version (unittest)
 {
-    void testPreprocess(string src, string result)
+    void testPreprocess(const Params params, string src, string result)
     {
-        const Params params;
 
         uchar[100] tmpbuf = void;
         auto outbuf = Textbuf!uchar(tmpbuf);
@@ -404,9 +414,12 @@ version (unittest)
     }
 }
 
+version (none)
+{
 unittest
 {
-    testPreprocess(
+    const Params params;
+    testPreprocess(params,
 "asdf\r
 asd\\\r
 ff\r
@@ -418,3 +431,13 @@ asdf
 asdff
 `);
 }
+}
+
+unittest
+{
+    writeln("u2");
+    Params params;
+    params.defines ~= "abc=def";
+    testPreprocess(params, "+abc+\n", "# 1 \"test.c\"\n+def+\n");
+}
+

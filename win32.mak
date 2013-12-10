@@ -39,7 +39,7 @@ dmpp.exe : $(SRCS)
 	$(DMD) $(SRCS) -ofdmpp.exe
 
 unittest : $(SRCS)
-	$(DMD) $(SRCS) -ofdmpp.exe -unittest -cov
+	$(DMD) -g $(SRCS) -ofdmpp.exe -unittest -cov
 
 clean:
 	$(DEL) dmpp.exe
