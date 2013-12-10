@@ -12,9 +12,12 @@ import core.memory;
 
 import cmdline;
 import context;
+import sources;
 
 alias char uchar;
 alias immutable(uchar)[] ustring;
+
+alias typeof(File.lockingTextWriter()) R;
 
 version (unittest)
 {
@@ -29,14 +32,26 @@ else
 
         const params = parseCommandLine(args);
 
-        auto context = Context(params);
+        auto context = Context!R(params);
 
         // Preprocess each file
         foreach (i; 0 .. params.sourceFilenames.length)
         {
-            context.localStart(params.sourceFilenames[i], params.outFilenames[i]);
+            auto srcFilename = params.sourceFilenames[i];
+            auto outFilename = params.outFilenames[i];
+
+            writefln("from %s to %s", srcFilename, outFilename);
+
+            auto sf = SrcFile.lookup(srcFilename);
+            sf.read();
+
+            File* fout = new File(outFilename, "wb");
+
+            context.localStart(sf, fout.lockingTextWriter());
             context.preprocess();
             context.localFinish();
+
+            delete fout;
         }
 
         context.globalFinish();

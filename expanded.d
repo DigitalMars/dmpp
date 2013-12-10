@@ -21,7 +21,7 @@ import textbuf;
 
 struct Expanded(R)
 {
-    Context* ctx;
+    Context!R* ctx;
 
     // Expanded output file
     uchar[1000] tmpbuf2 = void;
@@ -35,7 +35,7 @@ struct Expanded(R)
     void off() { ++noexpand; }
     void on()  { --noexpand; assert(noexpand >= 0); }
 
-    void initialize(Context* ctx)
+    void initialize(Context!R* ctx)
     {
         this.ctx = ctx;
         lineBuffer = Textbuf!uchar(tmpbuf2);

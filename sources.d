@@ -15,6 +15,7 @@ import std.path;
 import std.stdio;
 import std.string;
 
+import main;
 
 /*********************************
  * Things to know about source files.
@@ -23,7 +24,8 @@ import std.string;
 struct SrcFile
 {
     string filename;            // fully qualified file name
-    string includeGuard;        // macro #define used for #include guard
+    ustring contents;           // contents of the file
+    ustring includeGuard;       // macro #define used for #include guard
     bool once;                  // set if #pragma once set
 
     static SrcFile* lookup(string filename)
@@ -39,6 +41,14 @@ struct SrcFile
             p = filename in table;
         }
         return p;
+    }
+
+    /*******************************
+     * Read a file and set its contents.
+     */
+    void read()
+    {
+        contents = cast(ustring)std.file.read(filename);
     }
 }
 

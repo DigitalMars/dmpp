@@ -9,6 +9,7 @@
 module lexer;
 
 import std.array;
+import std.ascii;
 import std.range;
 import std.stdio;
 import std.traits;
@@ -30,6 +31,7 @@ enum TOK
     reserved,
 
     other,     // not of interest to the preprocessor
+    eol,       // end of line
     eof,       // end of file
 
     comma,
@@ -118,7 +120,7 @@ struct Lexer(R) if (isInputRange!R)
 
                 case '\n':
                     src.popFront();
-                    front = TOK.eof;
+                    front = TOK.eol;
                     return;
 
                 case '0': .. case '9':
@@ -408,7 +410,7 @@ struct Lexer(R) if (isInputRange!R)
                     {
                         if (expanded && !src.empty && src.isExpanded())
                             goto Lisident;
-                        auto m = Id.search(idbuf);
+                        auto m = Id.search(idbuf[]);
                         if (m && m.flags & Id.IDmacro)
                         {
                             assert(!(m.flags & Id.IDinuse));
@@ -416,7 +418,7 @@ struct Lexer(R) if (isInputRange!R)
                             if (m.flags & (Id.IDlinnum | Id.IDfile | Id.IDcounter))
                             {   // Predefined macro
                                 src.unget();
-                                auto p = ctx.predefined(m);
+                                auto p = src.predefined(m);
                                 src.push(p);
                                 src.expanded.on();
                                 src.popFront();
@@ -435,7 +437,7 @@ struct Lexer(R) if (isInputRange!R)
                                     if (space)
                                     {
                                         src.expanded.on();
-                                        src.expanded.put(idbuf);
+                                        src.expanded.put(idbuf[]);
                                         src.expanded.put(' ');
                                         front = TOK.identifier;
                                         return;
@@ -445,7 +447,6 @@ struct Lexer(R) if (isInputRange!R)
                                 c = cast(E)src.front;
                                 switch (c)
                                 {
-                                    case ' ':
                                     case ' ':
                                     case '\t':
                                     case '\r':
@@ -479,7 +480,7 @@ struct Lexer(R) if (isInputRange!R)
                                             space = ' ';
                                             continue;
                                         }
-                                        src.put('/');
+                                        src.push('/');
                                         goto default;
 
                                     case '(':           // found start of argument list
@@ -488,11 +489,11 @@ struct Lexer(R) if (isInputRange!R)
 
                                     default:
                                         src.expanded.on();
-                                        src.expanded.put(idbuf);
+                                        src.expanded.put(idbuf[]);
                                         if (space)
                                             src.expanded.put(space);
                                         if (c)
-                                            src.put(c);
+                                            src.push(c);
                                         front = TOK.identifier;
                                         return;
                                 }
@@ -511,7 +512,7 @@ struct Lexer(R) if (isInputRange!R)
 
                             auto p = macroExpandedText(m, args);
                             auto q = macroRescan(m, p);
-                            if (p.ptr) free(p.ptr);
+                            //if (p.ptr) free(p.ptr);
 
                             /*
                              * Insert break if necessary to prevent
@@ -532,7 +533,7 @@ struct Lexer(R) if (isInputRange!R)
 
                     Lisident:
                         src.expanded.on();
-                        src.expanded.put(idbuf);
+                        src.expanded.put(idbuf[]);
                         front = TOK.identifier;
                         return;
                     }
@@ -564,7 +565,7 @@ struct Lexer(R) if (isInputRange!R)
                                     static if (isContext)
                                     {
                                         src.expanded.on();
-                                        src.expanded.put(idbuf);
+                                        src.expanded.put(idbuf[]);
                                     }
                                     src.popFront();
                                     src = src.skipRawStringLiteral(bitbucket);
@@ -577,7 +578,7 @@ struct Lexer(R) if (isInputRange!R)
                                     static if (isContext)
                                     {
                                         src.expanded.on();
-                                        src.expanded.put(idbuf);
+                                        src.expanded.put(idbuf[]);
                                     }
                                     src.popFront();
                                     src = src.skipStringLiteral(bitbucket);
@@ -600,7 +601,7 @@ struct Lexer(R) if (isInputRange!R)
                                     static if (isContext)
                                     {
                                         src.expanded.on();
-                                        src.expanded.put(idbuf);
+                                        src.expanded.put(idbuf[]);
                                     }
                                     src.popFront();
                                     src = src.lexCharacterLiteral(number.value, s);
@@ -812,6 +813,8 @@ unittest
     assert(lexer.number.value == 100);
     assert(lexer.number.isunsigned);
     lexer.popFront();
+    assert(lexer.front == TOK.eol);
+    lexer.popFront();
     assert(lexer.front == TOK.eof);
   }
   {
@@ -819,6 +822,8 @@ unittest
     auto lexer = createLexer(s);
     assert(!lexer.empty);
     assert(lexer.front == TOK.other);
+    lexer.popFront();
+    assert(lexer.front == TOK.eol);
     lexer.popFront();
     assert(lexer.front == TOK.eof);
   }
@@ -831,6 +836,8 @@ unittest
     assert(lexer.front == TOK.identifier && lexer.idbuf[] == "$def");
     lexer.popFront();
     assert(lexer.front == TOK.identifier && lexer.idbuf[] == "_ehi");
+    lexer.popFront();
+    assert(lexer.front == TOK.eol);
     lexer.popFront();
     assert(lexer.front == TOK.eof);
   }
@@ -847,6 +854,8 @@ unittest
     assert(lexer.front == TOK.other);
     lexer.popFront();
     assert(lexer.front == TOK.other);
+    lexer.popFront();
+    assert(lexer.front == TOK.eol);
     lexer.popFront();
     assert(lexer.front == TOK.eof);
   }
@@ -865,6 +874,8 @@ unittest
     assert(lexer.front == TOK.identifier && lexer.idbuf[] == "LX");
     lexer.popFront();
     assert(lexer.front == TOK.other);
+    lexer.popFront();
+    assert(lexer.front == TOK.eol);
     lexer.popFront();
     assert(lexer.front == TOK.eof);
   }
@@ -886,6 +897,8 @@ unittest
     lexer.popFront();
     assert(lexer.front == TOK.integer && lexer.number.value == 'a');
     lexer.popFront();
+    assert(lexer.front == TOK.eol);
+    lexer.popFront();
     assert(lexer.front == TOK.eof);
   }
   {
@@ -893,6 +906,8 @@ unittest
     auto lexer = createLexer(s);
     assert(!lexer.empty);
     assert(lexer.front == TOK.other);
+    lexer.popFront();
+    assert(lexer.front == TOK.eol);
     lexer.popFront();
     assert(lexer.front == TOK.eof);
   }

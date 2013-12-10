@@ -33,6 +33,11 @@ struct Textbuf(T)
         buf[i++] = c;
     }
 
+    void put(dchar c)
+    {
+        put(cast(T)c);
+    }
+
     void put(const(T)[] s)
     {
         size_t newlen = i + s.length;

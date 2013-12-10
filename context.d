@@ -21,6 +21,7 @@ import std.traits;
 import cmdline;
 import expanded;
 import id;
+import lexer;
 import loc;
 import macros;
 import main;
@@ -30,9 +31,11 @@ import directive;
 
 /*********************************
  * Keep the state of the preprocessor in this struct.
+ * Input:
+ *      R       output range for preprocessor output
  */
 
-struct Context
+struct Context(R)
 {
     const Params params;        // command line parameters
 
@@ -51,8 +54,7 @@ struct Context
 
     uchar xc = ' ';
 
-    File* fout;         // for expanded (preprocessed) output
-    Expanded!(typeof(File.lockingTextWriter())) expanded;
+    Expanded!R expanded;         // for expanded (preprocessed) output
 
     Loc lastloc;
     bool uselastloc;
@@ -87,20 +89,21 @@ struct Context
     /**********
      * Create local context
      */
-    void localStart(string sourceFilename, string outFilename)
+    void localStart(SrcFile* sf, R outrange)
     {
-        writefln("from %s to %s", sourceFilename, outFilename);
-        Id.defineMacro(cast(ustring)"__BASE_FILE__", null, cast(ustring)sourceFilename, Id.IDpredefined);
+        // Define predefined macros
+        Id.defineMacro(cast(ustring)"__BASE_FILE__", null, cast(ustring)sf.filename, Id.IDpredefined);
         Id.initPredefined();
         foreach (def; params.defines)
             macrosDefine(def);
 
-        fout = new File(outFilename, "wb");
-        expanded.start(fout.lockingTextWriter());
+        // Set up preprocessed output
+        expanded.start(outrange);
 
+        // Initialize source text
         auto s = push();
         sourceFilei = sourcei;
-        s.addFile(sourceFilename, false);
+        s.addFile(sf, false);
         if (lastloc.srcFile)
             uselastloc = true;
     }
@@ -110,10 +113,13 @@ struct Context
      */
     void preprocess()
     {
-        while (!empty)
+        auto lexer = createLexer(&this);
+        while (!lexer.empty)
         {
-            auto c = front();
-            popFront();
+            auto tok = lexer.front;
+            lexer.popFront();
+            if (tok == TOK.eof)
+                break;
         }
     }
 
@@ -123,7 +129,6 @@ struct Context
     void localFinish()
     {
         expanded.finish();
-        delete fout;
     }
 
     /**********
@@ -182,6 +187,16 @@ struct Context
         --sources[sourcei].texti;
     }
 
+    void push(uchar c)
+    {
+    }
+
+    void push(const(uchar)[] s)
+    {
+        foreach (uchar c; s)
+            push(c);
+    }
+
     Source* currentSourceFile()
     {
         return sourceFilei == -1 ? null : &sources[sourceFilei];
@@ -224,6 +239,10 @@ struct Context
         --sourcei;
         return sourcei == -1 ? null : &sources[sourcei];
     }
+
+    bool isExpanded() { return sources[sourcei].isExpanded; }
+
+    void setExpanded() { sources[sourcei].isExpanded = true; }
 
     /***************************
      * Return text associated with predefined macro.
@@ -314,13 +333,14 @@ struct Source
 
     size_t texti;       // index of current position in lineBuffer[]
 
-    void addFile(string fileName, bool isSystem)
+    bool isExpanded;    // true if already macro expanded
+
+    void addFile(SrcFile* sf, bool isSystem)
     {
-        loc.srcFile = SrcFile.lookup(fileName);
-        assert(loc.srcFile.filename == fileName);
+        loc.srcFile = sf;
         loc.lineNumber = 0;
         loc.isSystem = isSystem;
-        input = cast(ustring)std.file.read(fileName);
+        input = sf.contents;
         isFile = true;
         includeGuard = null;
 
@@ -357,3 +377,44 @@ struct Source
 }
 
 
+/************************************** unit tests *************************/
+
+version (unittest)
+{
+    void testPreprocess(string src, string result)
+    {
+        const Params params;
+
+        uchar[100] tmpbuf = void;
+        auto outbuf = Textbuf!uchar(tmpbuf);
+
+        auto context = Context!(Textbuf!uchar*)(params);
+
+        // Create a fake source file with contents
+        auto sf = SrcFile.lookup("test.c");
+        sf.contents = cast(ustring)src;
+
+        context.localStart(sf, &outbuf);
+
+        context.preprocess();
+
+        context.expanded.finish();
+        writefln("output = |%s|", outbuf[]);
+        assert(outbuf[] == result);
+    }
+}
+
+unittest
+{
+    testPreprocess(
+"asdf\r
+asd\\\r
+ff\r
+",
+
+`# 2 "test.c"
+asdf
+# 3 "test.c"
+asdff
+`);
+}
