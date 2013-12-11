@@ -49,7 +49,7 @@ enum ESC : ubyte
 }
 
 /************************************
- * Transform the macro replacement text into a replacement list.
+ * Transform the macro definition into a replacement list.
  * Embed escape sequence commands for argument substitution, argument stringizing,
  * and token concatenation.
  * Input:
@@ -60,7 +60,7 @@ enum ESC : ubyte
  *      replacement list with embedded commands for inserting arguments and stringizing
  */
 
-ustring macroReplacementList(bool objectLike, ustring[] parameters, ustring text)
+ustring macroReplacementList(bool objectLike, ustring[] parameters, const(uchar)[] text)
 {
     assert(text.length && text[$ - 1] == '\n');
 
@@ -86,6 +86,7 @@ ustring macroReplacementList(bool objectLike, ustring[] parameters, ustring text
                     outbuf.pop();               // no trailing whitespace
                 if (outbuf.last() == ESC.concat && outbuf[outbuf.length - 2] == ESC.start)
                     err_fatal("## cannot appear at end of macro text");
+textPrint(outbuf[1 .. outbuf.length]);
                 return outbuf[1 .. outbuf.length].idup;
 
             case '\r':
@@ -698,7 +699,7 @@ uchar[] macroExpandedText(Context)(Id* m, ustring[] args)
     auto s = cast(uchar *)malloc(len);
     assert(s);
     memcpy(s, buffer[0 .. len].ptr, len);
-    //writefln("\treplacement text = '%s'", s[0 .. len]);
+    writefln("\treplacement text = '%s'", s[0 .. len]);
     return s[0 .. len];
 }
 
@@ -1385,3 +1386,37 @@ unittest
     assert(buf[] == "+ +(\n");
 }
 
+
+/***************************************************
+ */
+
+void textPrint(const(uchar)[] s)
+{
+    write('[');
+    foreach (i, char c; s)
+    {
+        switch (c)
+        {
+            case ESC.stringize:
+            case ESC.concat:
+            case ESC.space:
+            case ESC.brk:
+            case ESC.expand:
+                write("ESC.");
+                write(cast(ESC)c);
+                break;
+
+            default:
+                if (isPrintable(c))
+                    writef("'%s'", c);
+                else if (c < 10)
+                    writef("%d", c);
+                else
+                    writef("x%02x", c);
+                break;
+        }
+        if (i != s.length - 1)
+            write(',');
+    }
+    writeln(']');
+}

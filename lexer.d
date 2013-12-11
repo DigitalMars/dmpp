@@ -62,9 +62,11 @@ enum TOK
     defined,
     dotdotdot,
     assign,
+    hash,
 
     integer,
     identifier,
+    string,
 }
 
 alias long ppint_t;
@@ -80,7 +82,6 @@ struct Lexer(R) if (isInputRange!R)
 {
     TOK front;
     PPnumber number;
-    Id* ident;
 
     R src;
 
@@ -92,6 +93,20 @@ struct Lexer(R) if (isInputRange!R)
     enum bool isContext = __traits(compiles, src.expanded);
 
     StaticArrayBuffer!(E, 1024) idbuf = void;
+
+    bool stringLiteral;
+
+    void needStringLiteral()
+    {
+        idbuf.init();           // put the string literal in idbuf[]
+        stringLiteral = true;
+    }
+
+    E[] getStringLiteral()
+    {
+        stringLiteral = false;
+        return idbuf[];
+    }
 
     enum empty = false;         // return TOK.eof for going off the end
 
@@ -340,6 +355,7 @@ struct Lexer(R) if (isInputRange!R)
                 case '?':    src.popFront(); front = TOK.question;  return;
                 case ':':    src.popFront(); front = TOK.colon;     return;
                 case '~':    src.popFront(); front = TOK.tilde;     return;
+                case '#':    src.popFront(); front = TOK.hash;     return;
 
                 case '{':
                 case '}':
@@ -378,7 +394,21 @@ struct Lexer(R) if (isInputRange!R)
 
                 case '"':
                     src.popFront();
-                    src = src.skipStringLiteral(bitbucket);
+                    static if (isContext)
+                    {
+                        if (stringLiteral)
+                        {
+                            src = src.lexStringLiteral(idbuf, '"', STR.s);
+                            front = TOK.string;
+                            return;
+                        }
+                        else
+                            src = src.skipStringLiteral(bitbucket);
+                    }
+                    else
+                    {
+                        src = src.skipStringLiteral(bitbucket);
+                    }
                     goto Lother;
 
                 case '\'':
@@ -405,7 +435,6 @@ struct Lexer(R) if (isInputRange!R)
                     idbuf.init();
                     src = src.inIdentifier(idbuf);
                 Lident:
-writefln("test1 %s", idbuf[]);
                     static if (!isContext)
                     {
                         front = TOK.identifier;
@@ -413,15 +442,11 @@ writefln("test1 %s", idbuf[]);
                     }
                     else
                     {
-writeln("test2");
                         if (expanded && !src.empty && src.isExpanded())
                             goto Lisident;
-writeln("test3");
                         auto m = Id.search(idbuf[]);
-writeln(m);
                         if (m && m.flags & Id.IDmacro)
                         {
-writeln("test4");
                             assert(!(m.flags & Id.IDinuse));
 
                             if (m.flags & (Id.IDlinnum | Id.IDfile | Id.IDcounter))
@@ -519,7 +544,9 @@ writeln("test4");
                                 src.unget();
 
                             auto p = macroExpandedText!(typeof(*src))(m, args);
+                            //writefln("expanded: '%s'", p);
                             auto q = macroRescan!(typeof(*src))(m, p);
+                            //writefln("rescanned: '%s'", q);
                             //if (p.ptr) free(p.ptr);
 
                             /*
@@ -542,6 +569,7 @@ writeln("test4");
                     Lisident:
                         src.expanded.on();
                         src.expanded.put(idbuf[]);
+                        src.expanded.put(src.front);
                         front = TOK.identifier;
                         return;
                     }
@@ -574,6 +602,7 @@ writeln("test4");
                                     {
                                         src.expanded.on();
                                         src.expanded.put(idbuf[]);
+                                        src.expanded.put(src.front);
                                     }
                                     src.popFront();
                                     src = src.skipRawStringLiteral(bitbucket);
@@ -587,9 +616,22 @@ writeln("test4");
                                     {
                                         src.expanded.on();
                                         src.expanded.put(idbuf[]);
+                                        src.expanded.put(src.front);
+                                        src.popFront();
+                                        if (stringLiteral)
+                                        {
+                                            src = src.lexStringLiteral(idbuf, '"', STR.s);
+                                            front = TOK.string;
+                                            return;
+                                        }
+                                        else
+                                            src = src.skipStringLiteral(bitbucket);
                                     }
-                                    src.popFront();
-                                    src = src.skipStringLiteral(bitbucket);
+                                    else
+                                    {
+                                        src.popFront();
+                                        src = src.skipStringLiteral(bitbucket);
+                                    }
                                     goto Lother;
 
                                 default:
@@ -610,6 +652,7 @@ writeln("test4");
                                     {
                                         src.expanded.on();
                                         src.expanded.put(idbuf[]);
+                                        src.expanded.put(src.front);
                                     }
                                     src.popFront();
                                     src = src.lexCharacterLiteral(number.value, s);

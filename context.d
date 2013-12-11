@@ -121,9 +121,19 @@ struct Context(R)
         while (!lexer.empty)
         {
             auto tok = lexer.front;
-writeln(tok);
+            //writeln(tok);
             lexer.popFront();
-            if (tok == TOK.eof)
+            if (tok != TOK.eol)
+                continue;
+
+            // Either at start of a new line, or the end of the file
+            if (lexer.empty)
+                break;
+            tok = lexer.front;
+            if (tok == TOK.hash)
+                // A '#' starting off a line says preprocessing directive
+                lexer.parseDirective();
+            else if (tok == TOK.eof)
                 break;
         }
     }
@@ -184,6 +194,15 @@ writeln(tok);
             expanded.put(xc);
             break;
         }
+    }
+
+    uchar[] restOfLine()
+    {
+        auto s = &sources[sourcei];
+        auto result = s.lineBuffer[s.texti .. s.lineBuffer.length];
+        s.texti = s.lineBuffer.length;
+        xc = '\n';
+        return result;
     }
 
     void unget()
@@ -409,7 +428,8 @@ version (unittest)
         context.preprocess();
 
         context.expanded.finish();
-        writefln("output = |%s|", outbuf[]);
+        if (outbuf[] != result)
+            writefln("output = |%s|", outbuf[]);
         assert(outbuf[] == result);
     }
 }
@@ -431,7 +451,6 @@ asdf
 asdff
 `);
 }
-}
 
 unittest
 {
@@ -440,4 +459,15 @@ unittest
     params.defines ~= "abc=def";
     testPreprocess(params, "+abc+\n", "# 1 \"test.c\"\n+def+\n");
 }
+}
+
+unittest
+{
+    writeln("u3");
+    Params params;
+    params.defines ~= "abc2(a)=def=a=*";
+    testPreprocess(params, "+abc2(3)+\n", "# 1 \"test.c\"\n+def=3=* +\n");
+//    exit(0);
+}
+
 

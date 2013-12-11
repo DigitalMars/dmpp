@@ -282,7 +282,7 @@ R skipFloat(R, S)(R r, ref S s, bool hex, bool sawdot, bool isexponent)
     if (r.empty)
         goto Lreturn;
 
-    E get() { E c = cast(E)r.front; r.popFront(); return c; }
+    E get() { E c = cast(E)r.front; return c; }
 
     E c = get();
 
@@ -296,12 +296,14 @@ R skipFloat(R, S)(R r, ref S s, bool hex, bool sawdot, bool isexponent)
     if (c == '0')
     {
         s.put(c);
+        r.popFront();
         if (r.empty)
             goto Lreturn;
         c = get();
         if (c == 'x' || c == 'X')
         {
             s.put(c);
+            r.popFront();
             hex = true;
             if (r.empty)
             {
@@ -318,6 +320,7 @@ R skipFloat(R, S)(R r, ref S s, bool hex, bool sawdot, bool isexponent)
         if (c == '.')
         {
             s.put(c);
+            r.popFront();
             if (r.empty)
                 goto Lreturn;
             c = get();
@@ -326,6 +329,7 @@ R skipFloat(R, S)(R r, ref S s, bool hex, bool sawdot, bool isexponent)
         if (isDigit(c) || (hex && isHexDigit(c)))
         {
             s.put(c);
+            r.popFront();
             if (r.empty)
                 goto Lreturn;
             c = get();
@@ -342,6 +346,7 @@ Lsawdot:
         if (isDigit(c) || (hex && isHexDigit(c)))
         {
             s.put(c);
+            r.popFront();
             if (r.empty)
                 goto Lreturn;
             c = get();
@@ -354,6 +359,7 @@ Lisexponent:
     if (c == 'e' || c == 'E' || (hex && (c == 'p' || c == 'P')))
     {
         s.put(c);
+        r.popFront();
         if (r.empty)
         {
             err_fatal("exponent digits missing");
@@ -363,6 +369,7 @@ Lisexponent:
         if (c == '-' || c == '+')
         {
             s.put(c);
+            r.popFront();
             if (r.empty)
             {
                 err_fatal("exponent digits missing");
@@ -375,6 +382,7 @@ Lisexponent:
         {
             if (isDigit(c) || (hex && isHexDigit(c)))
             {
+                r.popFront();
                 s.put(c);
                 anyexp = true;
                 if (r.empty)
@@ -393,6 +401,7 @@ Lisexponent:
     if (c == 'f' || c == 'F' || c == 'l' || c == 'L')
     {
         s.put(c);
+        r.popFront();
         if (r.empty)
             goto Lreturn;
         c = get();
@@ -407,13 +416,15 @@ unittest
     BitBucket!char bitbucket = void;
 
     string[] cases = ["", "0", "1", "55.", "2.3", "0.0E+2", "0.0e-150", "0E03",
-        "2.7l", "3.2L ", "5.6e1f", "125.1234F",
+        "2.7l", "3.2L", "5.6e1f", "125.1234F",
         "0x12abcdefABCDEFp+20", "0x9.aP-10"
         ];
 
     foreach (s; cases)
     {
+        //writefln("before: |%s|", s);
         s = s.skipFloat(bitbucket, false, false, false);
+        //writefln("after: |%s|", s);
         assert(s.empty);
     }
 

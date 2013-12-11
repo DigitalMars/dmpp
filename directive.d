@@ -15,6 +15,7 @@ import id;
 import lexer;
 import macros;
 import main;
+import sources;
 
 /*******************************
  * Parse the macro parameter list.
@@ -24,7 +25,7 @@ import main;
  *      variadic        true if variadic parameter list
  *      parameters      the parameters
  * Returns:
- *      r               following the ')'
+ *      r               on character following the ')'
  */
 
 void lexMacroParameters(R)(ref R r, out bool variadic, out ustring[] parameters)
@@ -37,7 +38,6 @@ void lexMacroParameters(R)(ref R r, out bool variadic, out ustring[] parameters)
         {
             case TOK.rparen:
                 parameters = params;
-                r.popFront();
                 return;
 
             case TOK.identifier:
@@ -119,6 +119,7 @@ void macrosDefine(ustring def)
                 lexer.popFront();
                 objectLike = false;
                 lexer.lexMacroParameters(variadic, parameters);
+                lexer.popFront();
                 if (!lexer.empty && lexer.front != TOK.eof && lexer.front != TOK.eol)
                 {
                     if (lexer.front != TOK.assign)
@@ -211,3 +212,252 @@ unittest
   }
 }
 
+
+/*********************************************
+ * Seen a '#', the start of a preprocessing directive.
+ * Lexer has just finished the #, has not read next token yet.
+ * Input:
+ *      r       the lexer
+ * Ouput:
+ *      r       start of next line
+ */
+
+void parseDirective(R)(ref R r)
+{
+    r.popFront();
+    if (r.empty)
+    {
+        return;
+    }
+
+    bool linemarker = void;
+    switch (r.front)
+    {
+        case TOK.identifier:
+        {
+            auto id = r.idbuf[];
+            switch (id)
+            {
+                case "line":
+                    // #line directive
+                    linemarker = false;
+                    r.popFront();
+                    if (r.empty)
+                        goto Leof;
+                    if (r.front == TOK.integer)
+                        goto Lline;
+                    goto Ldefault;
+
+                case "pragma":
+                    r.popFront();
+                    assert(!r.empty);
+                    if (r.front == TOK.identifier && r.idbuf[] == "once")
+                    {
+                        auto sf = r.src.currentSourceFile();
+                        if (sf)
+                            sf.loc.srcFile.once = true;
+
+                        // Turn off expanded output so this line is not emitted
+                        r.src.expanded.off();
+                        r.src.expanded.lineBuffer.initialize();
+                        while (1)
+                        {
+                            r.popFront();
+                            if (r.empty)
+                            {   r.src.expanded.on();
+                                goto Ldefault;
+                            }
+                            if (r.front == TOK.eol)
+                                break;
+                        }
+                        r.src.expanded.on();
+                        r.src.expanded.put(r.src.front);
+                        return;
+                    }
+                    /* Ignore the directive
+                     */
+                    while (1)
+                    {
+                        r.popFront();
+                        if (r.empty)
+                            goto Ldefault;
+                        if (r.front == TOK.eol)
+                            break;
+                    }
+                    return;
+
+                case "define":
+                {
+                    // Turn off expanded output so this line is not emitted
+                    r.src.expanded.off();
+                    r.src.expanded.lineBuffer.initialize();
+
+                    r.popFront();
+                    assert(!r.empty);
+                    if (r.front != TOK.identifier)
+                    {   r.src.expanded.on();
+                        err_fatal("identifier expected following #define");
+                        return;
+                    }
+
+                    auto macid = r.idbuf[].idup;
+
+                    ustring[] parameters;
+                    bool objectLike = true;
+                    bool variadic;
+
+                    if (r.src.front == '(')
+                    {
+                        r.popFront();
+                        assert(r.front == TOK.lparen);
+                        r.popFront();
+                        objectLike = false;
+                        r.lexMacroParameters(variadic, parameters);
+                    }
+                    auto definition = r.src.restOfLine();
+                    auto text = macroReplacementList(objectLike, parameters, definition);
+
+                    uint flags = 0;
+                    if (variadic)
+                        flags |= Id.IDdotdotdot;
+                    if (!objectLike)
+                        flags |= Id.IDfunctionLike;
+
+                    auto m = Id.defineMacro(macid, parameters, text, flags);
+                    if (!m)
+                    {
+                        err_fatal("redefinition of macro %s", id);
+                    }
+                    r.src.expanded.on();
+                    return;
+                }
+
+                case "undef":
+                {
+                    // Turn off expanded output so this line is not emitted
+                    r.src.expanded.off();
+                    r.src.expanded.lineBuffer.initialize();
+
+                    r.popFront();
+                    assert(!r.empty);
+                    if (r.front != TOK.identifier)
+                    {   r.src.expanded.on();
+                        err_fatal("identifier expected following #define");
+                        return;
+                    }
+
+                    auto m = Id.search(r.idbuf[]);
+                    if (m)
+                        m.flags &= ~Id.IDmacro;
+
+                    r.popFront();
+                    if (r.front != TOK.eol)
+                        err_fatal("end of line expected");
+
+                    r.src.expanded.on();
+                    return;
+                }
+
+                case "error":
+                    auto msg = r.src.restOfLine();
+                    err_fatal("%s", msg);
+                    return;
+
+                case "ifdef":
+                {
+                    // Turn off expanded output so this line is not emitted
+                    r.src.expanded.off();
+                    r.src.expanded.lineBuffer.initialize();
+
+                    r.popFront();
+                    assert(!r.empty);
+                    if (r.front != TOK.identifier)
+                    {   r.src.expanded.on();
+                        err_fatal("identifier expected following #ifdef");
+                        return;
+                    }
+
+                    auto m = Id.search(r.idbuf[]);
+                    auto cond = (m && m.flags & Id.IDmacro);
+
+                    r.popFront();
+                    if (r.front != TOK.eol)
+                        err_fatal("end of line expected");
+
+                    r.src.expanded.on();
+                    return;
+                }
+
+                case "ifndef":
+                case "if":
+                case "else":
+                case "elif":
+                case "endif":
+                case "include":
+                    assert(0);
+
+                default:
+                    err_fatal("unrecognized preprocessing directive #%s", id);
+                    r.popFront();
+                    return;
+            }
+            break;
+        }
+
+        case TOK.integer:
+            // So-called "linemarker" record
+            linemarker = true;
+        Lline:
+        {
+            auto sf = r.src.currentSourceFile();
+            if (!sf)
+                return;
+            sf.loc.lineNumber = cast(uint)(r.number.value - 1);
+            r.needStringLiteral();
+            r.popFront();
+            if (r.empty || r.front == TOK.eol)
+                break;
+            while (!r.empty && r.front == TOK.string)
+            {
+                r.popFront();
+            }
+            // The string is in r.idbuf[]
+            auto s = cast(string)r.getStringLiteral();
+
+            // s is the new "source file"
+            auto srcfile = SrcFile.lookup(s.idup);
+            srcfile.contents = sf.loc.srcFile.contents;
+            srcfile.includeGuard = sf.loc.srcFile.includeGuard;
+            srcfile.once = sf.loc.srcFile.once;
+
+            sf.loc.srcFile = srcfile;
+
+            if (linemarker)
+            {
+                while (!r.empty && r.front == TOK.integer)
+                {
+                    r.popFront();
+                }
+            }
+            if (r.empty || r.front != TOK.eol)
+            {
+                err_fatal("end of line expected");
+            }
+            break;
+        }
+
+        case TOK.eol:
+            r.popFront();
+            break;
+
+        case TOK.eof:
+        Leof:
+            assert(0);          // lines should always end with TOK.eol
+
+        default:
+        Ldefault:
+            err_fatal("preprocessing directive expected");
+            r.popFront();
+            break;
+    }
+}
