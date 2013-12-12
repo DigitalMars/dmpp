@@ -368,7 +368,7 @@ bool parseDirective(R)(ref R r)
 
                     r.popFront();
                     if (r.front != TOK.eol)
-                        err_fatal("end of line expected");
+                        err_fatal("1end of line expected");
 
                     r.src.expanded.on();
                     return true;
@@ -392,9 +392,8 @@ bool parseDirective(R)(ref R r)
 
                     r.src.ifstack.put(CONDif);
 
-                    r.popFront();
                     if (r.front != TOK.eol)
-                        err_fatal("end of line expected");
+                        err_fatal(r.loc(), "end of line expected after #if expression");
 
                     if (!cond)
                     {
@@ -427,7 +426,7 @@ bool parseDirective(R)(ref R r)
 
                     r.popFront();
                     if (r.front != TOK.eol)
-                        err_fatal("end of line expected");
+                        err_fatal("3end of line expected");
 
                     if (!cond)
                     {
@@ -481,7 +480,7 @@ bool parseDirective(R)(ref R r)
 
                     r.popFront();
                     if (r.front != TOK.eol)
-                        err_fatal("end of line expected");
+                        err_fatal("4end of line expected");
 
                     r.src.expanded.on();
                     return true;
@@ -490,7 +489,7 @@ bool parseDirective(R)(ref R r)
                 case "else":
                     r.popFront();
                     if (r.front != TOK.eol)
-                        err_fatal("end of line expected");
+                        err_fatal("5end of line expected");
                     r.src.expanded.on();
                     if (r.src.ifstack.length == 0 || r.src.ifstack.last() == CONDendif)
                         err_fatal("#else by itself");
@@ -524,7 +523,7 @@ bool parseDirective(R)(ref R r)
                 case "endif":
                     r.popFront();
                     if (r.front != TOK.eol)
-                        err_fatal("end of line expected");
+                        err_fatal("6end of line expected");
                     r.src.expanded.on();
                     if (r.src.ifstack.length == 0)
                         err_fatal("#endif by itself");
@@ -592,7 +591,7 @@ bool parseDirective(R)(ref R r)
                     if (s.length == 0)
                         err_fatal("filename expected");
                     if (r.front != TOK.eol)
-                        err_fatal("end of line expected");
+                        err_fatal("7end of line expected");
                     r.src.includeFile(includeNext, sysstring, s);
                     r.src.expanded.on();
                     r.popFront();
@@ -644,7 +643,7 @@ bool parseDirective(R)(ref R r)
             }
             if (r.empty || r.front != TOK.eol)
             {
-                err_fatal("end of line expected");
+                err_fatal("8end of line expected");
             }
             break;
         }
@@ -714,7 +713,7 @@ void skipFalseCond(R)(ref R r)
                                     r.src.ifstack.put(CONDif);
 
                                     if (r.front != TOK.eol)
-                                        err_fatal("end of line expected");
+                                        err_fatal("9end of line expected");
 
                                     if (cond)
                                     {

@@ -12,6 +12,7 @@ import core.memory;
 
 import cmdline;
 import context;
+import loc;
 import sources;
 
 alias char uchar;
@@ -70,4 +71,12 @@ void err_fatal(T...)(T args)
     stderr.writefln(args);
     exit(EXIT_FAILURE);
 }
+
+void err_fatal(L:Loc, T...)(L loc, T args)
+{
+    loc.write(&stderr);
+    stderr.writefln(args);
+    exit(EXIT_FAILURE);
+}
+
 

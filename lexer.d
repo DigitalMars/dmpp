@@ -15,6 +15,7 @@ import std.stdio;
 import std.traits;
 
 import id;
+import loc;
 import macros;
 import main;
 import number;
@@ -110,6 +111,18 @@ struct Lexer(R) if (isInputRange!R)
     }
 
     enum empty = false;         // return TOK.eof for going off the end
+
+    Loc loc()
+    {
+        static if (isContext)
+        {
+            auto csf = src.currentSourceFile();
+            if (csf)
+                return csf.loc;
+        }
+        Loc loc;
+        return loc;
+    }
 
     void popFront()
     {
