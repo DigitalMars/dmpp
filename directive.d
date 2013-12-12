@@ -10,12 +10,24 @@ module directive;
 
 import std.algorithm;
 import std.stdio;
+import std.string;
 
+import constexpr;
 import id;
 import lexer;
 import macros;
 import main;
+import skip;
 import sources;
+import stringlit;
+import textbuf;
+
+enum : ubyte
+{
+    CONDguard,          // a possible #include guard
+    CONDendif,          // looking for #endif only
+    CONDif,             // looking for #else, #elif, or #endif
+}
 
 /*******************************
  * Parse the macro parameter list.
@@ -220,17 +232,21 @@ unittest
  *      r       the lexer
  * Ouput:
  *      r       start of next line
+ * Returns:
+ *      true    if this preprocessor directive counts as a token
  */
 
-void parseDirective(R)(ref R r)
+bool parseDirective(R)(ref R r)
 {
     r.popFront();
     if (r.empty)
     {
-        return;
+        return false;
     }
 
     bool linemarker = void;
+    bool includeNext;
+
     switch (r.front)
     {
         case TOK.identifier:
@@ -272,7 +288,7 @@ void parseDirective(R)(ref R r)
                         }
                         r.src.expanded.on();
                         r.src.expanded.put(r.src.front);
-                        return;
+                        return true;
                     }
                     /* Ignore the directive
                      */
@@ -284,7 +300,7 @@ void parseDirective(R)(ref R r)
                         if (r.front == TOK.eol)
                             break;
                     }
-                    return;
+                    return true;
 
                 case "define":
                 {
@@ -297,7 +313,7 @@ void parseDirective(R)(ref R r)
                     if (r.front != TOK.identifier)
                     {   r.src.expanded.on();
                         err_fatal("identifier expected following #define");
-                        return;
+                        return true;
                     }
 
                     auto macid = r.idbuf[].idup;
@@ -329,7 +345,7 @@ void parseDirective(R)(ref R r)
                         err_fatal("redefinition of macro %s", id);
                     }
                     r.src.expanded.on();
-                    return;
+                    return true;
                 }
 
                 case "undef":
@@ -343,7 +359,7 @@ void parseDirective(R)(ref R r)
                     if (r.front != TOK.identifier)
                     {   r.src.expanded.on();
                         err_fatal("identifier expected following #define");
-                        return;
+                        return true;
                     }
 
                     auto m = Id.search(r.idbuf[]);
@@ -355,13 +371,40 @@ void parseDirective(R)(ref R r)
                         err_fatal("end of line expected");
 
                     r.src.expanded.on();
-                    return;
+                    return true;
                 }
 
                 case "error":
                     auto msg = r.src.restOfLine();
                     err_fatal("%s", msg);
-                    return;
+                    return true;
+
+                case "if":
+                {
+                    // Turn off expanded output so this line is not emitted
+                    r.src.expanded.off();
+                    r.src.expanded.lineBuffer.initialize();
+
+                    r.popFront();
+                    assert(!r.empty);
+
+                    auto cond = r.constantExpression();
+
+                    r.src.ifstack.put(CONDif);
+
+                    r.popFront();
+                    if (r.front != TOK.eol)
+                        err_fatal("end of line expected");
+
+                    if (!cond)
+                    {
+                        r.src.expanded.off();
+                        r.skipFalseCond();
+                    }
+
+                    r.src.expanded.on();
+                    return true;
+                }
 
                 case "ifdef":
                 {
@@ -374,32 +417,192 @@ void parseDirective(R)(ref R r)
                     if (r.front != TOK.identifier)
                     {   r.src.expanded.on();
                         err_fatal("identifier expected following #ifdef");
-                        return;
+                        return true;
                     }
 
                     auto m = Id.search(r.idbuf[]);
                     auto cond = (m && m.flags & Id.IDmacro);
+
+                    r.src.ifstack.put(CONDif);
+
+                    r.popFront();
+                    if (r.front != TOK.eol)
+                        err_fatal("end of line expected");
+
+                    if (!cond)
+                    {
+                        r.src.expanded.off();
+                        r.skipFalseCond();
+                    }
+
+                    r.src.expanded.on();
+                    return true;
+                }
+
+                case "ifndef":
+                {
+                    bool seenTokens = false;
+                    auto sf = r.src.currentSourceFile();
+                    if (sf)
+                        seenTokens = sf.seenTokens;
+
+                    // Turn off expanded output so this line is not emitted
+                    r.src.expanded.off();
+                    r.src.expanded.lineBuffer.initialize();
+
+                    r.popFront();
+                    assert(!r.empty);
+                    if (r.front != TOK.identifier)
+                    {   r.src.expanded.on();
+                        err_fatal("identifier expected following #ifndef");
+                        return true;
+                    }
+
+                    auto m = Id.search(r.idbuf[]);
+                    auto cond = (m && m.flags & Id.IDmacro);
+
+                    if (cond)
+                    {
+                        r.src.ifstack.put(CONDif);
+                        r.src.expanded.off();
+                        r.skipFalseCond();
+                    }
+                    else
+                    {
+                        if (sf && !seenTokens && sf.includeGuard == null)
+                        {
+                            sf.includeGuard = r.idbuf[].dup;
+                            sf.ifstacki = r.src.ifstack.length();
+                            r.src.ifstack.put(CONDguard);
+                        }
+                        else
+                            r.src.ifstack.put(CONDif);
+                    }
 
                     r.popFront();
                     if (r.front != TOK.eol)
                         err_fatal("end of line expected");
 
                     r.src.expanded.on();
-                    return;
+                    return true;
                 }
 
-                case "ifndef":
-                case "if":
                 case "else":
+                    r.popFront();
+                    if (r.front != TOK.eol)
+                        err_fatal("end of line expected");
+                    r.src.expanded.on();
+                    if (r.src.ifstack.length == 0 || r.src.ifstack.last() == CONDendif)
+                        err_fatal("#else by itself");
+                    else
+                    {
+                        r.src.ifstack.pop();
+                        r.src.ifstack.put(CONDendif);
+                        r.skipFalseCond();
+                    }
+                    return true;
+
                 case "elif":
+                    while (!r.empty)
+                    {
+                        r.popFront();
+                        if (r.front == TOK.eol)
+                            break;
+                        assert(r.front != TOK.eof);
+                    }
+                    r.src.expanded.on();
+                    if (r.src.ifstack.length == 0 || r.src.ifstack.last() == CONDendif)
+                        err_fatal("#else by itself");
+                    else
+                    {
+                        r.src.ifstack.pop();
+                        r.src.ifstack.put(CONDif);
+                        r.skipFalseCond();
+                    }
+                    return true;
+
                 case "endif":
+                    r.popFront();
+                    if (r.front != TOK.eol)
+                        err_fatal("end of line expected");
+                    r.src.expanded.on();
+                    if (r.src.ifstack.length == 0)
+                        err_fatal("#endif by itself");
+                    else
+                    {
+                        if (r.src.ifstack.last() == CONDguard)
+                        {
+                            auto sf = r.src.currentSourceFile();
+                            if (sf &&
+                                sf.includeGuard != null &&
+                                sf.ifstacki == r.src.ifstack.length() - 1)
+                            {
+                                sf.seenTokens = false;
+                            }
+                        }
+                        r.src.ifstack.pop();
+                    }
+                    return true;
+
+                case "include_next":
+                    includeNext = true;
+                    goto Linclude;
+
                 case "include":
-                    assert(0);
+                Linclude:
+                {
+                    // Turn off expanded output so this line is not emitted
+                    r.src.expanded.off();
+                    r.src.expanded.lineBuffer.initialize();
+
+                    uchar[30] tmpbuf = void;
+                    auto stringbuf = Textbuf!uchar(tmpbuf);
+                    const(uchar)[] s;
+                    bool sysstring = false;
+
+                    r.src.skipWhitespace();
+                    if (r.src.front == '"')
+                    {
+                        r.src.popFront();
+                        r.src.lexStringLiteral(stringbuf, '"', STR.f);
+                        s = stringbuf[];
+                    }
+                    else if (r.src.front == '<')
+                    {
+                        sysstring = true;
+                        r.src.popFront();
+                        s = stringbuf[];
+                        r.src.lexStringLiteral(stringbuf, '>', STR.f);
+                    }
+                    else
+                    {
+                        r.needStringLiteral();
+                        r.popFront();
+                        if (r.front == TOK.string)
+                            r.popFront();
+                        else if (r.front == TOK.sysstring)
+                        {   sysstring = true;
+                            r.popFront();
+                        }
+                        else
+                            err_fatal("string expected");
+                        // The string is in r.idbuf[]
+                        s = r.getStringLiteral();
+                    }
+                    if (s.length == 0)
+                        err_fatal("filename expected");
+                    if (r.front != TOK.eol)
+                        err_fatal("end of line expected");
+                    r.src.includeFile(includeNext, sysstring, s);
+                    r.src.expanded.on();
+                    r.popFront();
+                    return true;
+                }
 
                 default:
                     err_fatal("unrecognized preprocessing directive #%s", id);
                     r.popFront();
-                    return;
+                    return true;
             }
             break;
         }
@@ -411,7 +614,7 @@ void parseDirective(R)(ref R r)
         {
             auto sf = r.src.currentSourceFile();
             if (!sf)
-                return;
+                return true;
             sf.loc.lineNumber = cast(uint)(r.number.value - 1);
             r.needStringLiteral();
             r.popFront();
@@ -460,4 +663,160 @@ void parseDirective(R)(ref R r)
             r.popFront();
             break;
     }
+    return true;
 }
+
+/***************************************
+ * Consume input until a #else, #elif, or #endif is seen.
+ * Input:
+ *      lexer   at beginning of line
+ */
+
+void skipFalseCond(R)(ref R r)
+{
+    auto starti = r.src.ifstack.length;
+
+    r.popFront();
+    while (!r.empty)
+    {
+        assert(!r.empty);
+        if (r.front == TOK.hash)
+        {
+            // Start of preprocessing directive
+            r.popFront();
+            if (r.front == TOK.identifier)
+            {
+                auto id = r.idbuf[];
+                switch (id)
+                {
+                    case "if":
+                    case "ifdef":
+                    case "ifndef":
+                        r.src.ifstack.put(CONDif);
+                        break;
+
+                    case "elif":
+                        final switch (r.src.ifstack.last())
+                        {
+                            case CONDendif:
+                                err_fatal("#elif not following #if");
+                                break;
+
+                            case CONDif:
+                            case CONDguard:
+                                if (starti == r.src.ifstack.length())
+                                {
+                                    // Same code here as for #if
+                                    r.popFront();
+                                    auto cond = r.constantExpression();
+
+                                    r.src.ifstack.pop();
+                                    r.src.ifstack.put(CONDif);
+
+                                    if (r.front != TOK.eol)
+                                        err_fatal("end of line expected");
+
+                                    if (cond)
+                                    {
+                                        r.popFront();
+                                        r.src.expanded.on();
+                                        return;
+                                    }
+                                }
+                                break;
+                        }
+                        break;
+
+                    case "else":
+                        final switch (r.src.ifstack.last())
+                        {
+                            case CONDendif:
+                                err_fatal("#else not following #if");
+                                break;
+
+                            case CONDif:
+                            case CONDguard:
+                                if (starti == r.src.ifstack.length())
+                                {
+                                    // Skip the rest of the line
+                                    r.src.restOfLine();
+                                    r.popFront();
+                                    r.src.expanded.on();
+                                    return;
+                                }
+                                break;
+                        }
+                        break;
+
+                    case "endif":
+                        if (starti == r.src.ifstack.length())
+                        {
+                            r.src.ifstack.pop();
+
+                            // Skip the rest of the line
+                            r.src.restOfLine();
+                            r.popFront();
+                            r.src.expanded.on();
+                            return;
+                        }
+                        r.src.ifstack.pop();
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+        }
+
+        if (r.front == TOK.eol)
+        {
+            r.popFront();
+        }
+        else
+        {
+            // Skip the rest of the line
+            r.src.restOfLine();
+            r.popFront();
+        }
+    }
+    err_fatal("end of file found before #endif");
+}
+
+/*************************************
+ * Process #include file
+ * Input:
+ *      includeNext     if it was #include_next
+ *      system          if <file>
+ *      s               the filename string in transient buffer
+ */
+
+void includeFile(R)(R ctx, bool includeNext, bool sysstring, const(char)[] s)
+{
+    s = strip(s);       // remove leading and trailing whitespace
+
+    auto csf = ctx.currentSourceFile();
+    if (csf && csf.loc.isSystem)
+        sysstring = true;
+
+    auto sf = ctx.searchForFile(includeNext, sysstring, s);
+    if (!sf)
+    {
+        err_fatal("#include file '%s' not found", s);
+        return;
+    }
+
+    // Check for #pragma once
+    if (sf.once)
+        return;
+
+    // Check for #include guard
+    if (sf.includeGuard.length)
+    {
+        auto m = Id.search(sf.includeGuard);
+        if (m && m.flags & Id.IDmacro)
+            return;
+    }
+
+    ctx.pushFile(sf, sysstring);
+}
+

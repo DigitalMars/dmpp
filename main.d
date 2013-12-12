@@ -45,6 +45,9 @@ else
             auto sf = SrcFile.lookup(srcFilename);
             sf.read();
 
+            if (context.doDeps)
+                context.deps ~= srcFilename;
+
             File* fout = new File(outFilename, "wb");
 
             context.localStart(sf, fout.lockingTextWriter());

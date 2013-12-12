@@ -65,7 +65,7 @@ struct SrcFile
  *      fully qualified filename if found, null if not
  */
 
-string fileSearch(string filename, string[] paths, size_t starti, out size_t foundi)
+SrcFile* fileSearch(string filename, string[] paths, int starti, out int foundi)
 {
     foundi = paths.length;
 
@@ -81,12 +81,12 @@ string fileSearch(string filename, string[] paths, size_t starti, out size_t fou
             auto name = buildPath(path, filename);
             if (exists(name))
             {   foundi = key;
-                return buildNormalizedPath(name);
+                return SrcFile.lookup(buildNormalizedPath(name));
             }
         }
         return null;
     }
     filename = buildNormalizedPath(filename);
-    return filename;
+    return SrcFile.lookup(filename);
 }
 

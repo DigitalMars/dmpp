@@ -67,6 +67,7 @@ enum TOK
     integer,
     identifier,
     string,
+    sysstring,
 }
 
 alias long ppint_t;
@@ -204,6 +205,15 @@ struct Lexer(R) if (isInputRange!R)
 
                 case '<':
                     src.popFront();
+                    static if (isContext)
+                    {
+                        if (stringLiteral)
+                        {
+                            src = src.lexStringLiteral(idbuf, '>', STR.f);
+                            front = TOK.sysstring;
+                            return;
+                        }
+                    }
                     if (!src.empty && src.front == '=')
                     {
                         src.popFront();
@@ -355,7 +365,7 @@ struct Lexer(R) if (isInputRange!R)
                 case '?':    src.popFront(); front = TOK.question;  return;
                 case ':':    src.popFront(); front = TOK.colon;     return;
                 case '~':    src.popFront(); front = TOK.tilde;     return;
-                case '#':    src.popFront(); front = TOK.hash;     return;
+                case '#':    src.popFront(); front = TOK.hash;      return;
 
                 case '{':
                 case '}':
@@ -398,7 +408,7 @@ struct Lexer(R) if (isInputRange!R)
                     {
                         if (stringLiteral)
                         {
-                            src = src.lexStringLiteral(idbuf, '"', STR.s);
+                            src = src.lexStringLiteral(idbuf, '"', STR.f);
                             front = TOK.string;
                             return;
                         }
@@ -620,7 +630,7 @@ struct Lexer(R) if (isInputRange!R)
                                         src.popFront();
                                         if (stringLiteral)
                                         {
-                                            src = src.lexStringLiteral(idbuf, '"', STR.s);
+                                            src = src.lexStringLiteral(idbuf, '"', STR.f);
                                             front = TOK.string;
                                             return;
                                         }

@@ -23,6 +23,7 @@ import ranges;
 enum STR
 {
     s,  // default
+    f,  // #include string, i.e. no special meaning for \ character
     L,  // wchar_t
     u8, // UTF-8
     u,  // wchar
@@ -94,16 +95,13 @@ R lexStringLiteral(R, S)(R r, ref S s, char tc, STR str)
                 goto default;
 
             case ESC.space:
-                r.popFront();
-                break;
-
-            case ESC.brk:
-                if (tc != '>')
-                    goto default;
+            case ESC.brk:               // token separator
                 r.popFront();
                 break;
 
             case '\\':
+                if (str == STR.f)       // ignore escapes in #include strings
+                    goto default;
             Lslash:
                 /* Escape sequences
                  */
@@ -168,6 +166,7 @@ R lexStringLiteral(R, S)(R r, ref S s, char tc, STR str)
                 final switch (str)
                 {
                     case STR.s:
+                    case STR.f:
                         s.put(cast(E)d);
                         break;
 
@@ -315,6 +314,9 @@ R lexCharacterLiteral(R)(R r, ref ppint_t i, STR str)
         case STR.U:
             i = *cast(uint*)a.ptr;
             break;
+
+        case STR.f:
+            assert(0);
     }
 
     return r;

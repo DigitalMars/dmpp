@@ -72,9 +72,9 @@ struct Textbuf(T)
         return buf[i - 1];
     }
 
-    void pop()
+    T pop()
     {
-        --i;
+        return buf[--i];
     }
 
     @property size_t length()

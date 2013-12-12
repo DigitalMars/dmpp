@@ -19,15 +19,16 @@ import std.stdio;
 import std.traits;
 
 import cmdline;
+import directive;
 import expanded;
 import id;
 import lexer;
 import loc;
 import macros;
 import main;
+import outdeps;
 import textbuf;
 import sources;
-import directive;
 
 /*********************************
  * Keep the state of the preprocessor in this struct.
@@ -46,7 +47,7 @@ struct Context(R)
     uint counter;       // for __COUNTER__
 
     bool doDeps;        // true if doing dependency file generation
-    char[] deps;        // dependency file contents
+    string[] deps;      // dependency file contents
 
     Source[10] sources;
     int sourcei = -1;
@@ -60,6 +61,11 @@ struct Context(R)
     bool uselastloc;
 
     __gshared Context* _ctx;            // shameful use of global variable
+
+    // Stack of #if/#else/#endif nesting
+    ubyte[8] tmpbuf = void;
+    Textbuf!ubyte ifstack;
+
 
     /******
      * Construct global context from the command line parameters
@@ -76,6 +82,8 @@ struct Context(R)
             sources[i].lineBuffer = Textbuf!uchar(sources[i].tmpbuf);
         }
 
+        ifstack = Textbuf!ubyte(tmpbuf);
+        ifstack.initialize();
         expanded.initialize(&this);
         setContext();
     }
@@ -105,9 +113,14 @@ struct Context(R)
         expanded.start(outrange);
 
         // Initialize source text
+        pushFile(sf, false);
+    }
+
+    void pushFile(SrcFile* sf, bool isSystem)
+    {
         auto s = push();
         sourceFilei = sourcei;
-        s.addFile(sf, false);
+        s.addFile(sf, isSystem, -1);
         if (lastloc.srcFile)
             uselastloc = true;
     }
@@ -118,23 +131,37 @@ struct Context(R)
     void preprocess()
     {
         auto lexer = createLexer(&this);
-        while (!lexer.empty)
+        while (1)
         {
-            auto tok = lexer.front;
-            //writeln(tok);
-            lexer.popFront();
-            if (tok != TOK.eol)
-                continue;
-
             // Either at start of a new line, or the end of the file
-            if (lexer.empty)
-                break;
-            tok = lexer.front;
-            if (tok == TOK.hash)
+            assert(!lexer.empty);
+            auto tok = lexer.front;
+            if (tok == TOK.eol)
+                lexer.popFront();
+            else if (tok == TOK.hash)
+            {
                 // A '#' starting off a line says preprocessing directive
-                lexer.parseDirective();
+                if (lexer.parseDirective())
+                {
+                    auto csf = currentSourceFile();
+                    if (csf)
+                        csf.seenTokens = true;
+                }
+            }
             else if (tok == TOK.eof)
                 break;
+            else
+            {
+                auto csf = currentSourceFile();
+                if (csf)
+                    csf.seenTokens = true;
+
+                do
+                {
+                    lexer.popFront();
+                } while (lexer.front != TOK.eol);
+                lexer.popFront();
+            }
         }
     }
 
@@ -153,7 +180,7 @@ struct Context(R)
     {
         if (doDeps && !errors)
         {
-            std.file.write(params.depFilename, deps);
+            dependencyFileWrite(params.depFilename, deps);
         }
     }
 
@@ -259,11 +286,10 @@ struct Context(R)
             }
             lastloc = s.loc;
             uselastloc = true;
-            if (s.includeGuard)
+            if (s.includeGuard && !s.seenTokens)
             {
-                assert(0);              // fix
-                //if (saw #endif and no tokens)
-                    s.loc.srcFile.includeGuard = s.includeGuard;
+                // Saw #endif and no tokens
+                s.loc.srcFile.includeGuard = s.includeGuard;
             }
         }
         --sourcei;
@@ -305,6 +331,36 @@ struct Context(R)
         auto len = sprintf(cast(char*)p, "%u", n);
         assert(len > 0);
         return cast(ustring)p[0 .. len];
+    }
+
+    /*******************************************
+     * Search for file along paths[]
+     */
+    SrcFile* searchForFile(bool includeNext, out bool isSystem, const(char)[] s)
+    {
+        int pathIndex = 0;
+        if (isSystem)
+        {
+            pathIndex = sysIndex;
+        }
+        else
+        {
+            auto csf = currentSourceFile();
+            if (csf && includeNext)
+                pathIndex = csf.pathIndex;
+        }
+
+        auto sf = fileSearch(cast(string)s, paths, pathIndex, pathIndex);
+        if (!sf)
+            return null;
+
+        if (sf.contents == null)
+        {
+            sf.read();
+            if (!isSystem && doDeps)
+                deps ~= sf.filename;
+        }
+        return sf;
     }
 }
 
@@ -356,25 +412,30 @@ struct Source
     Loc loc;            // current location
     ustring input;      // remaining file contents
     string includeGuard;
+    int pathIndex;      // index into paths[] of where this file came from (-1 if not)
+    int ifstacki;       // index into ifstack[]
 
     uchar[16] tmpbuf = void;
     Textbuf!uchar lineBuffer = void;
 
-    size_t texti;       // index of current position in lineBuffer[]
+    uint texti;         // index of current position in lineBuffer[]
 
     bool isFile;        // if it is a file
     bool isExpanded;    // true if already macro expanded
+    bool seenTokens;    // true if seen tokens
 
-    void addFile(SrcFile* sf, bool isSystem)
+    void addFile(SrcFile* sf, bool isSystem, int pathIndex)
     {
+        // set new file, set haven't seen tokens yet
         loc.srcFile = sf;
         loc.lineNumber = 0;
         loc.isSystem = isSystem;
         input = sf.contents;
         isFile = true;
         includeGuard = null;
-
-        // set new file, set haven't seen tokens yet
+        this.pathIndex = pathIndex;
+        this.isExpanded = false;
+        this.seenTokens = false;
     }
 
     /***************************

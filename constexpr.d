@@ -28,6 +28,8 @@ private:
 
 PPnumber Primary(Lexer)(ref Lexer r)
 {
+    enum bool isContext = __traits(compiles, r.src.expanded);
+
     switch (r.front)
     {
         case TOK.identifier:
@@ -38,14 +40,15 @@ PPnumber Primary(Lexer)(ref Lexer r)
                     err_fatal("identifier expected");
                 else
                 {
-    /+
-                    if (r.id.flags & IDmacro)
+                    static if (isContext)
                     {
                         PPnumber i;
-                        i.value = 1;
+                        auto m = Id.search(r.idbuf[]);
+                        if (m && m.flags & Id.IDmacro)
+                            i.value = 1;
+                        r.popFront();
                         return i;
                     }
-    +/
                 }
             }
             break;
