@@ -27,6 +27,7 @@ struct SrcFile
     ustring contents;           // contents of the file
     ustring includeGuard;       // macro #define used for #include guard
     bool once;                  // set if #pragma once set
+    bool doesNotExist;          // file does not exist
 
     static SrcFile* lookup(string filename)
     {
@@ -46,14 +47,31 @@ struct SrcFile
     /*******************************
      * Read a file and set its contents.
      */
-    void read()
+    bool read()
     {
-        contents = cast(ustring)std.file.read(filename);
+        if (doesNotExist)
+            return false;
+
+        if (contents)
+            return true;                // already read
+
+        bool result = true;
+        try
+        {
+            contents = cast(ustring)std.file.read(filename);
+        }
+        catch (FileException e)
+        {
+            result = false;
+            doesNotExist = true;
+        }
+        return result;
     }
 }
 
 /*********************************
  * Search for file along paths[].
+ * Cache results.
  * Input:
  *      filename        file to look for
  *      paths[]         search paths
@@ -70,23 +88,38 @@ SrcFile* fileSearch(string filename, string[] paths, int starti, out int foundi)
     foundi = paths.length;
 
     filename = strip(filename);
+    SrcFile* sf;
 
     if (isRooted(filename))
     {
+        sf = SrcFile.lookup(filename);
+        if (!sf.read())
+            return null;
     }
     else
     {
         foreach (key, path; paths[starti .. $])
         {
             auto name = buildPath(path, filename);
-            if (exists(name))
+            sf = SrcFile.lookup(name);
+            if (sf.read())
             {   foundi = key;
-                return SrcFile.lookup(buildNormalizedPath(name));
+                goto L1;
             }
         }
         return null;
     }
-    filename = buildNormalizedPath(filename);
-    return SrcFile.lookup(filename);
+ L1:
+    filename = buildNormalizedPath(sf.filename);
+    if (filenameCmp(filename, sf.filename))
+    {   // Cache the normalized file name as a clone of the original unnormalized one
+        auto sf2 = SrcFile.lookup(filename);
+        sf2.contents = sf.contents;
+        sf2.includeGuard = sf.includeGuard;
+        sf2.once = sf.once;
+        sf2.doesNotExist = sf.doesNotExist;
+        sf = sf2;
+    }
+    return sf;
 }
 

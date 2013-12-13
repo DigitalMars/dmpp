@@ -44,7 +44,8 @@ else
             writefln("from %s to %s", srcFilename, outFilename);
 
             auto sf = SrcFile.lookup(srcFilename);
-            sf.read();
+            if (!sf.read())
+                err_fatal("cannot read file %s", srcFilename);
 
             if (context.doDeps)
                 context.deps ~= srcFilename;
