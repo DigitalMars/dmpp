@@ -63,6 +63,8 @@ Options:
 
     Params p;
 
+    p.includes ~= ".";
+
     getopt(args,
         std.getopt.config.passThrough,
         std.getopt.config.caseSensitive,
@@ -130,7 +132,7 @@ unittest
         assert(p.sourceFilenames == ["foo.c"]);
         assert(p.defines == ["macro=value"]);
         assert(p.depFilename == "out.dep");
-        assert(p.includes == ["path1", "path2"]);
+        assert(p.includes == [".", "path1", "path2"]);
         assert(p.sysincludes == ["sys1", "sys2"]);
         assert(p.outFilenames == ["out.i"]);
 }

@@ -588,9 +588,13 @@ bool parseDirective(R)(ref R r)
                     }
                     if (s.length == 0)
                         err_fatal("filename expected");
+                    r.popFront();
                     if (r.front != TOK.eol)
-                        err_fatal("7end of line expected");
+                        err_fatal(r.loc(), "end of line expected following #include");
+                    r.src.unget();
+                    r.src.push('\n');
                     r.src.includeFile(includeNext, sysstring, s);
+                    r.src.popFront();
                     r.src.expanded.on();
                     r.popFront();
                     return true;
