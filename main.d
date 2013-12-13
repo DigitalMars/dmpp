@@ -41,7 +41,8 @@ else
             auto srcFilename = params.sourceFilenames[i];
             auto outFilename = params.outFilenames[i];
 
-            writefln("from %s to %s", srcFilename, outFilename);
+            if (context.params.verbose)
+                writefln("from %s to %s", srcFilename, outFilename);
 
             auto sf = SrcFile.lookup(srcFilename);
             if (!sf.read())

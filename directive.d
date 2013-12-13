@@ -815,14 +815,22 @@ void includeFile(R)(R ctx, bool includeNext, bool sysstring, const(char)[] s)
 
     // Check for #pragma once
     if (sf.once)
+    {
+        if (ctx.params.verbose)
+            writefln("skipping '%s'", sf.filename);
         return;
+    }
 
     // Check for #include guard
     if (sf.includeGuard.length)
     {
         auto m = Id.search(sf.includeGuard);
         if (m && m.flags & Id.IDmacro)
+        {
+            if (ctx.params.verbose)
+                writefln("skipping '%s'", sf.filename);
             return;
+        }
     }
 
     ctx.pushFile(sf, sysstring);

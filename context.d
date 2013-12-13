@@ -118,7 +118,8 @@ struct Context(R)
 
     void pushFile(SrcFile* sf, bool isSystem)
     {
-        writefln("reading file %s", sf.filename);
+        if (params.verbose)
+            writefln("reading file %s", sf.filename);
         auto s = push();
         sourceFilei = sourcei;
         s.addFile(sf, isSystem, -1);

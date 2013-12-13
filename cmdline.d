@@ -29,6 +29,7 @@ struct Params
     string[] defines;
     string[] includes;
     string[] sysincludes;
+    bool verbose;
 }
 
 
@@ -57,6 +58,7 @@ Options:
   -I path           path to #include files
   --isystem path    path to system #include files
   -o filename       preprocessed output file
+  -v                verbose
 ");
         exit(EXIT_SUCCESS);
     }
@@ -72,7 +74,8 @@ Options:
         "define|D",     &p.defines,
         "isystem",      &p.sysincludes,
         "dep",          &p.depFilename,
-        "output|o",     &p.outFilenames);
+        "output|o",     &p.outFilenames,
+        "v",            &p.verbose);
 
     p.sourceFilenames = args[1 .. $];
 
