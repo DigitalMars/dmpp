@@ -27,6 +27,7 @@ enum : ubyte
     CONDguard,          // a possible #include guard
     CONDendif,          // looking for #endif only
     CONDif,             // looking for #else, #elif, or #endif
+    CONDtoendif,        // skipping over #else, #elif, looking for #endif
 }
 
 /*******************************
@@ -244,6 +245,7 @@ bool parseDirective(R)(ref R r)
         return false;
     }
 
+    bool cond = void;
     bool linemarker = void;
     bool includeNext;
 
@@ -345,6 +347,7 @@ bool parseDirective(R)(ref R r)
                         err_fatal("redefinition of macro %s", id);
                     }
                     r.src.expanded.on();
+                    r.front = TOK.eol;
                     return true;
                 }
 
@@ -388,7 +391,7 @@ bool parseDirective(R)(ref R r)
                     r.popFront();
                     assert(!r.empty);
 
-                    auto cond = r.constantExpression();
+                    cond = r.constantExpression();
 
                     r.src.ifstack.put(CONDif);
 
@@ -411,22 +414,22 @@ bool parseDirective(R)(ref R r)
                     r.src.expanded.off();
                     r.src.expanded.lineBuffer.initialize();
 
-                    r.popFront();
+                    r.popFrontNoExpand();
                     assert(!r.empty);
                     if (r.front != TOK.identifier)
                     {   r.src.expanded.on();
-                        err_fatal("identifier expected following #ifdef");
+                        err_fatal(r.loc(), "identifier expected following #ifdef");
                         return true;
                     }
 
                     auto m = Id.search(r.idbuf[]);
-                    auto cond = (m && m.flags & Id.IDmacro);
+                    cond = (m && m.flags & Id.IDmacro);
 
                     r.src.ifstack.put(CONDif);
-
+                Ldef:
                     r.popFront();
                     if (r.front != TOK.eol)
-                        err_fatal("3end of line expected");
+                        err_fatal(r.loc(), "end of line expected following identifier");
 
                     if (!cond)
                     {
@@ -449,48 +452,36 @@ bool parseDirective(R)(ref R r)
                     r.src.expanded.off();
                     r.src.expanded.lineBuffer.initialize();
 
-                    r.popFront();
+                    r.popFrontNoExpand();
                     assert(!r.empty);
                     if (r.front != TOK.identifier)
                     {   r.src.expanded.on();
-                        err_fatal("identifier expected following #ifndef");
+                        err_fatal(r.loc(), "identifier expected following #ifndef");
                         return true;
                     }
 
                     auto m = Id.search(r.idbuf[]);
-                    auto cond = (m && m.flags & Id.IDmacro);
+                    cond = !(m && m.flags & Id.IDmacro);
 
-                    if (cond)
+                    auto cnd = CONDif;
+                    if (cond && sf && !seenTokens && sf.includeGuard == null)
                     {
-                        r.src.ifstack.put(CONDif);
-                        r.src.expanded.off();
-                        r.skipFalseCond();
-                    }
-                    else
-                    {
-                        if (sf && !seenTokens && sf.includeGuard == null)
-                        {
-                            sf.includeGuard = r.idbuf[].dup;
-                            sf.ifstacki = r.src.ifstack.length();
-                            r.src.ifstack.put(CONDguard);
-                        }
-                        else
-                            r.src.ifstack.put(CONDif);
+                        sf.includeGuard = r.idbuf[].dup;
+                        sf.ifstacki = r.src.ifstack.length();
+                        cnd = CONDguard;
                     }
 
-                    r.popFront();
-                    if (r.front != TOK.eol)
-                        err_fatal("4end of line expected");
-
-                    r.src.expanded.on();
-                    return true;
+                    r.src.ifstack.put(cnd);
+                    goto Ldef;
                 }
 
                 case "else":
+                    // Turn off expanded output so this line is not emitted
+                    r.src.expanded.off();
+                    r.src.expanded.lineBuffer.initialize();
                     r.popFront();
                     if (r.front != TOK.eol)
                         err_fatal("5end of line expected");
-                    r.src.expanded.on();
                     if (r.src.ifstack.length == 0 || r.src.ifstack.last() == CONDendif)
                         err_fatal("#else by itself");
                     else
@@ -502,6 +493,9 @@ bool parseDirective(R)(ref R r)
                     return true;
 
                 case "elif":
+                    // Turn off expanded output so this line is not emitted
+                    r.src.expanded.off();
+                    r.src.expanded.lineBuffer.initialize();
                     while (!r.empty)
                     {
                         r.popFront();
@@ -509,22 +503,26 @@ bool parseDirective(R)(ref R r)
                             break;
                         assert(r.front != TOK.eof);
                     }
-                    r.src.expanded.on();
                     if (r.src.ifstack.length == 0 || r.src.ifstack.last() == CONDendif)
-                        err_fatal("#else by itself");
+                        err_fatal(r.loc(), "#elif by itself");
                     else
                     {
                         r.src.ifstack.pop();
-                        r.src.ifstack.put(CONDif);
+                        r.src.ifstack.put(CONDtoendif);
                         r.skipFalseCond();
                     }
                     return true;
 
                 case "endif":
+                    // Turn off expanded output so this line is not emitted
+                    r.src.expanded.off();
+                    r.src.expanded.lineBuffer.initialize();
                     r.popFront();
                     if (r.front != TOK.eol)
                         err_fatal("6end of line expected");
                     r.src.expanded.on();
+                    r.src.expanded.put('\n');
+                    r.src.expanded.put(r.src.front);
                     if (r.src.ifstack.length == 0)
                         err_fatal("#endif by itself");
                     else
@@ -713,15 +711,18 @@ void skipFalseCond(R)(ref R r)
                                     r.src.ifstack.put(CONDif);
 
                                     if (r.front != TOK.eol)
-                                        err_fatal("9end of line expected");
+                                        err_fatal(r.loc, "end of line expected following #elif expr");
 
                                     if (cond)
                                     {
-                                        r.popFront();
                                         r.src.expanded.on();
+                                        r.src.expanded.put(r.src.front);
                                         return;
                                     }
                                 }
+                                break;
+
+                            case CONDtoendif:
                                 break;
                         }
                         break;
@@ -743,6 +744,9 @@ void skipFalseCond(R)(ref R r)
                                     r.src.expanded.on();
                                     return;
                                 }
+                                break;
+
+                            case CONDtoendif:
                                 break;
                         }
                         break;

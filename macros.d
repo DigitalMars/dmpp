@@ -62,6 +62,9 @@ enum ESC : ubyte
 
 ustring macroReplacementList(bool objectLike, ustring[] parameters, const(uchar)[] text)
 {
+    if (!text.length)
+        return "";
+
     assert(text.length && text[$ - 1] == '\n');
 
     uchar[1000] tmpbuf = void;
@@ -86,7 +89,7 @@ ustring macroReplacementList(bool objectLike, ustring[] parameters, const(uchar)
                     outbuf.pop();               // no trailing whitespace
                 if (outbuf.last() == ESC.concat && outbuf[outbuf.length - 2] == ESC.start)
                     err_fatal("## cannot appear at end of macro text");
-textPrint(outbuf[1 .. outbuf.length]);
+                //textPrint(outbuf[1 .. outbuf.length]);
                 return outbuf[1 .. outbuf.length].idup;
 
             case '\r':

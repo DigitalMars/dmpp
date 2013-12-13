@@ -36,7 +36,7 @@ SRCS=main.d cmdline.d context.d id.d skip.d macros.d textbuf.d ranges.d outdeps.
 MAKEFILES=win32.mak
 
 dmpp.exe : $(SRCS)
-	$(DMD) $(SRCS) -ofdmpp.exe
+	$(DMD) -g $(SRCS) -ofdmpp.exe
 
 unittest : $(SRCS)
 	$(DMD) -g $(SRCS) -ofdmpp.exe -unittest -cov

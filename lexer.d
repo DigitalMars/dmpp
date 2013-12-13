@@ -97,6 +97,7 @@ struct Lexer(R) if (isInputRange!R)
     StaticArrayBuffer!(E, 1024) idbuf = void;
 
     bool stringLiteral;
+    bool noMacroExpand;
 
     void needStringLiteral()
     {
@@ -122,6 +123,16 @@ struct Lexer(R) if (isInputRange!R)
         }
         Loc loc;
         return loc;
+    }
+
+    /****************************
+     * Get a token without expanding macros.
+     */
+    void popFrontNoExpand()
+    {
+        noMacroExpand = true;
+        popFront();
+        noMacroExpand = false;
     }
 
     void popFront()
@@ -451,13 +462,21 @@ struct Lexer(R) if (isInputRange!R)
                 case 'V': .. case 'Z':
                     static if (isContext)
                     {
-                        expanded = src.isExpanded();
-                        src.expanded.popBack();
-                        src.expanded.off();
+                        if (!noMacroExpand)
+                        {
+                            expanded = src.isExpanded();
+                            src.expanded.popBack();
+                            src.expanded.off();
+                        }
                     }
                     idbuf.init();
                     src = src.inIdentifier(idbuf);
                 Lident:
+                    if (noMacroExpand)
+                    {
+                        front = TOK.identifier;
+                        return;
+                    }
                     static if (!isContext)
                     {
                         front = TOK.identifier;
@@ -604,9 +623,12 @@ struct Lexer(R) if (isInputRange!R)
                     // string prefixes: L LR u u8 uR u8R U UR R
                     static if (isContext)
                     {
-                        expanded = src.isExpanded();
-                        src.expanded.popBack();
-                        src.expanded.off();
+                        if (!noMacroExpand)
+                        {
+                            expanded = src.isExpanded();
+                            src.expanded.popBack();
+                            src.expanded.off();
+                        }
                     }
                     idbuf.init();
                     src = src.inIdentifier(idbuf);
@@ -623,9 +645,12 @@ struct Lexer(R) if (isInputRange!R)
                                 case "UR":
                                     static if (isContext)
                                     {
-                                        src.expanded.on();
-                                        src.expanded.put(idbuf[]);
-                                        src.expanded.put(src.front);
+                                        if (!noMacroExpand)
+                                        {
+                                            src.expanded.on();
+                                            src.expanded.put(idbuf[]);
+                                            src.expanded.put(src.front);
+                                        }
                                     }
                                     src.popFront();
                                     src = src.skipRawStringLiteral(bitbucket);
@@ -637,9 +662,12 @@ struct Lexer(R) if (isInputRange!R)
                                 case "U":
                                     static if (isContext)
                                     {
-                                        src.expanded.on();
-                                        src.expanded.put(idbuf[]);
-                                        src.expanded.put(src.front);
+                                        if (!noMacroExpand)
+                                        {
+                                            src.expanded.on();
+                                            src.expanded.put(idbuf[]);
+                                            src.expanded.put(src.front);
+                                        }
                                         src.popFront();
                                         if (stringLiteral)
                                         {
@@ -673,9 +701,12 @@ struct Lexer(R) if (isInputRange!R)
                                 Lchar:
                                     static if (isContext)
                                     {
-                                        src.expanded.on();
-                                        src.expanded.put(idbuf[]);
-                                        src.expanded.put(src.front);
+                                        if (!noMacroExpand)
+                                        {
+                                            src.expanded.on();
+                                            src.expanded.put(idbuf[]);
+                                            src.expanded.put(src.front);
+                                        }
                                     }
                                     src.popFront();
                                     src = src.lexCharacterLiteral(number.value, s);
@@ -705,7 +736,7 @@ struct Lexer(R) if (isInputRange!R)
                     break;
 
                 default:
-                    err_fatal("unrecognized preprocessor token");
+                    err_fatal(loc(), "unrecognized preprocessor token x%02x", c);
                     src.popFront();
                     break;
             }
