@@ -511,9 +511,11 @@ ustring getIthArg(ustring[] args, size_t argi)
  *      malloc'd ustring
  */
 
+//debug=macroExpandedText;
+
 uchar[] macroExpandedText(Context)(Id* m, ustring[] args)
 {
-    version (none)
+    debug (macroExpandedText)
     {
         writefln("macroExpandedText(m = '%s')", m.name);
         write("\ttext = "); textPrint(m.text);
@@ -704,7 +706,8 @@ uchar[] macroExpandedText(Context)(Id* m, ustring[] args)
     auto s = cast(uchar *)malloc(len);
     assert(s);
     memcpy(s, buffer[0 .. len].ptr, len);
-    //writefln("\tmacroExpandedText = '%s'", s[0 .. len]);
+    debug (macroExpandedText)
+        writefln("\tmacroExpandedText = '%s'", s[0 .. len]);
     return s[0 .. len];
 }
 
@@ -713,11 +716,11 @@ uchar[] macroExpandedText(Context)(Id* m, ustring[] args)
  * Take string text, fully macro expand it, and return the result.
  */
 
-//version=MacroExpand;
+//debug=MacroExpand;
 
 uchar[] macroExpand(Context)(const(uchar)[] text)
 {
-    version (MacroExpand)
+    debug (MacroExpand)
         writefln("+macroExpand(text = '%s')", cast(string)text);
 
     alias uchar E;
@@ -791,7 +794,7 @@ uchar[] macroExpand(Context)(const(uchar)[] text)
                     auto expanded = r.isExpanded();
                     size_t len = outbuf.length;
                     r = r.inIdentifier(outbuf);
-                    version (MacroExpand)
+                    debug (MacroExpand)
                         writefln("\tident[] = '%s'", outbuf[len .. outbuf.length]);
                     if (expanded && !r.empty && r.isExpanded())
                     {
@@ -944,7 +947,7 @@ uchar[] macroExpand(Context)(const(uchar)[] text)
 
                         auto p = macroExpandedText!Context(m, args);
                         auto q = macroRescan!Context(m, p);
-                        if (p.ptr) free(p.ptr);
+                        //if (p.ptr) free(p.ptr);
 
                         /*
                          * Insert break if necessary to prevent
@@ -966,7 +969,7 @@ uchar[] macroExpand(Context)(const(uchar)[] text)
                     r.popFront();
                 break;
         }
-        version (MacroExpand)
+        debug (MacroExpand)
             writefln("\toutbuf.put('%c', x%02x)", c, c);
         outbuf.put(c);
     }
@@ -976,7 +979,7 @@ Ldone:
     ctx.setContext();
     ctx.expanded.on();
 
-    version (MacroExpand)
+    debug (MacroExpand)
         writefln("-macroExpand() = '%s'", outbuf[0 .. outbuf.length]);
     return outbuf[0 .. outbuf.length].dup;
 }
@@ -997,6 +1000,7 @@ uchar[] macroRescan(Context)(Id* m, const(uchar)[] text)
     {
         uchar*p = cast(uchar*)malloc(1);
         assert(p);
+        p[0] = ESC.space;
         r = p[0 .. 1];
     }
     return r;

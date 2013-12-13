@@ -411,13 +411,41 @@ struct Lexer(R) if (isInputRange!R)
                                 goto Lother;
 
                             case '/':
-                                src.popFront();
-                                src = src.skipCppComment();
+                                static if (isContext)
+                                {
+                                    src.expanded.popBack();
+                                    src.expanded.popBack();     // remove '//'
+                                    src.expanded.off();
+                                    src.popFront();
+                                    src = src.skipCppComment();
+                                    src.expanded.on();
+                                    src.expanded.put('\n');
+                                    src.expanded.put(cast(E)src.front);
+                                }
+                                else
+                                {
+                                    src.popFront();
+                                    src = src.skipCppComment();
+                                }
                                 continue;
 
                             case '*':
-                                src.popFront();
-                                src = src.skipCComment();
+                                static if (isContext)
+                                {
+                                    src.expanded.popBack();
+                                    src.expanded.popBack();     // remove '/*'
+                                    src.expanded.off();
+                                    src.popFront();
+                                    src = src.skipCComment();
+                                    src.expanded.on();
+                                    src.expanded.put(' ');
+                                    src.expanded.put(cast(E)src.front);
+                                }
+                                else
+                                {
+                                    src.popFront();
+                                    src = src.skipCComment();
+                                }
                                 continue;
 
                             default:
