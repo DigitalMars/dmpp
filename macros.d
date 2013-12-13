@@ -515,9 +515,8 @@ uchar[] macroExpandedText(Context)(Id* m, ustring[] args)
 {
     version (none)
     {
-        //writefln("macro_replacement_text(m = '%s')", m.name);
-        //writefln("\ttext = '%s'", m.text);
-        write("\ttext = "); macrotext_print(m.text); writeln();
+        writefln("macroExpandedText(m = '%s')", m.name);
+        write("\ttext = "); textPrint(m.text);
         for (size_t i = 1; i <= args.length; ++i)
         {
             auto a = getIthArg(args, i);
@@ -570,17 +569,18 @@ uchar[] macroExpandedText(Context)(Id* m, ustring[] args)
                     const arg = getIthArg(args, argi2);
                     auto a = stringize(arg);
                     buffer.put(a);
-                    if (a.ptr) free(a.ptr);
+                    //if (a.ptr) free(a.ptr);
                     continue;
                 }
 
                 case ESC.concat:
-                    if (m.text[q + 1] == ESC.start)
+                    if (q + 1 < m.text.length && m.text[q + 1] == ESC.start)
                     {
                         /* Look for special case of:
                          * ',' ESC.start ESC.concat ESC.start __VA_ARGS__
                          */
-                        if (m.text[q + 2] == va_args && q >= 2 && m.text[q - 2] == ',')
+                        if (q >= 2 && q + 2 < m.text.length &&
+                            m.text[q + 2] == va_args && m.text[q - 2] == ',')
                         {
                             /* Elide the comma that was already in buffer,
                              * replace it with ESC.brk
@@ -597,7 +597,7 @@ uchar[] macroExpandedText(Context)(Id* m, ustring[] args)
 
                 default:
                     // If followed by CAT, don't expand
-                    if (q + 4 < m.text.length &&
+                    if (q + 2 < m.text.length &&
                         m.text[q + 1] == ESC.start && m.text[q + 2] == ESC.concat)
                     {   expand = false;
                         trimright = true;
@@ -613,7 +613,8 @@ uchar[] macroExpandedText(Context)(Id* m, ustring[] args)
                          * behavior.)
                          */
                         size_t argj;
-                        if (m.text[q + 3] == ESC.start &&
+                        if (q + 4 < m.text.length &&
+                            m.text[q + 3] == ESC.start &&
                             (argj = m.text[q + 4]) != ESC.start &&
                             argj != ESC.stringize &&
                             argj != ESC.concat)
@@ -703,7 +704,7 @@ uchar[] macroExpandedText(Context)(Id* m, ustring[] args)
     auto s = cast(uchar *)malloc(len);
     assert(s);
     memcpy(s, buffer[0 .. len].ptr, len);
-    writefln("\treplacement text = '%s'", s[0 .. len]);
+    //writefln("\tmacroExpandedText = '%s'", s[0 .. len]);
     return s[0 .. len];
 }
 
@@ -712,8 +713,13 @@ uchar[] macroExpandedText(Context)(Id* m, ustring[] args)
  * Take string text, fully macro expand it, and return the result.
  */
 
+//version=MacroExpand;
+
 uchar[] macroExpand(Context)(const(uchar)[] text)
 {
+    version (MacroExpand)
+        writefln("+macroExpand(text = '%s')", cast(string)text);
+
     alias uchar E;
 
     uchar[128] tmpbuf = void;
@@ -785,6 +791,8 @@ uchar[] macroExpand(Context)(const(uchar)[] text)
                     auto expanded = r.isExpanded();
                     size_t len = outbuf.length;
                     r = r.inIdentifier(outbuf);
+                    version (MacroExpand)
+                        writefln("\tident[] = '%s'", outbuf[len .. outbuf.length]);
                     if (expanded && !r.empty && r.isExpanded())
                     {
                         continue;
@@ -859,75 +867,76 @@ uchar[] macroExpand(Context)(const(uchar)[] text)
                             r.popFront();
                             continue;
                         }
-                        if (!(m.flags & Id.IDfunctionLike))
-                            continue;
 
-                        /* Scan up to opening '(' of actual argument list
-                         */
-                        E space = 0;
-                        while (1)
+                        ustring[] args;
+                        if (m.flags & Id.IDfunctionLike)
                         {
-                            if (r.empty)
-                                continue Louter;
-                            c = cast(E)r.front;
-                            switch (c)
+                            /* Scan up to opening '(' of actual argument list
+                             */
+                            E space = 0;
+                            while (1)
                             {
-                                case ' ':
-                                case '\t':
-                                case '\r':
-                                case '\n':
-                                case '\v':
-                                case '\f':
-                                case ESC.space:
-                                case ESC.brk:
-                                    space = c;
-                                    r.popFront();
-                                    continue;
+                                if (r.empty)
+                                    continue Louter;
+                                c = cast(E)r.front;
+                                switch (c)
+                                {
+                                    case ' ':
+                                    case '\t':
+                                    case '\r':
+                                    case '\n':
+                                    case '\v':
+                                    case '\f':
+                                    case ESC.space:
+                                    case ESC.brk:
+                                        space = c;
+                                        r.popFront();
+                                        continue;
 
-                                case '/':
-                                    r.popFront();
-                                    if (r.empty)
+                                    case '/':
+                                        r.popFront();
+                                        if (r.empty)
+                                            break;
+                                        c = r.front;
+                                        if (c == '*')
+                                        {
+                                            r.popFront();
+                                            r = r.skipCComment();
+                                            space = ' ';
+                                            continue;
+                                        }
+                                        if (c == '/')
+                                        {
+                                            r.popFront();
+                                            r = r.skipCppComment();
+                                            space = ' ';
+                                            continue;
+                                        }
+                                        if (space)
+                                            outbuf.put(space);
+                                        outbuf.put('/');
+                                        outbuf.put(c);
+                                        continue Louter;
+
+                                    case '(':               // found start of argument list
+                                        r.popFront();
                                         break;
-                                    c = r.front;
-                                    if (c == '*')
-                                    {
-                                        r.popFront();
-                                        r = r.skipCComment();
-                                        space = ' ';
-                                        continue;
-                                    }
-                                    if (c == '/')
-                                    {
-                                        r.popFront();
-                                        r = r.skipCppComment();
-                                        space = ' ';
-                                        continue;
-                                    }
-                                    if (space)
-                                        outbuf.put(space);
-                                    outbuf.put('/');
-                                    outbuf.put(c);
-                                    continue Louter;
 
-                                case '(':               // found start of argument list
-                                    r.popFront();
-                                    break;
-
-                                default:
-                                    if (space)
-                                        outbuf.put(space);
-                                    outbuf.put(c);
-                                    continue Louter;
+                                    default:
+                                        if (space)
+                                            outbuf.put(space);
+                                        outbuf.put(c);
+                                        continue Louter;
+                                }
+                                break;
                             }
-                            break;
+
+                            r = r.macroScanArguments(m.parameters.length,
+                                    !!(m.flags & Id.IDdotdotdot),
+                                     args, ctx);
                         }
 
                         outbuf.setLength(len);
-                        ustring[] args;
-                        r = r.macroScanArguments(m.parameters.length,
-                                !!(m.flags & Id.IDdotdotdot),
-                                 args, ctx);
-
                         auto xcnext = r.front;
 
                         if (!r.empty)
@@ -957,6 +966,8 @@ uchar[] macroExpand(Context)(const(uchar)[] text)
                     r.popFront();
                 break;
         }
+        version (MacroExpand)
+            writefln("\toutbuf.put('%c', x%02x)", c, c);
         outbuf.put(c);
     }
 
@@ -964,6 +975,9 @@ Ldone:
     // Restore previous context
     ctx.setContext();
     ctx.expanded.on();
+
+    version (MacroExpand)
+        writefln("-macroExpand() = '%s'", outbuf[0 .. outbuf.length]);
     return outbuf[0 .. outbuf.length].dup;
 }
 
@@ -1406,6 +1420,7 @@ void textPrint(const(uchar)[] s)
     {
         switch (c)
         {
+            case ESC.start:
             case ESC.stringize:
             case ESC.concat:
             case ESC.space:
