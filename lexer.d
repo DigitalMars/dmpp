@@ -98,6 +98,7 @@ struct Lexer(R) if (isInputRange!R)
 
     bool stringLiteral;
     bool noMacroExpand;
+    bool noExpand;
 
     void needStringLiteral()
     {
@@ -487,7 +488,7 @@ struct Lexer(R) if (isInputRange!R)
                         if (expanded && !src.empty && src.isExpanded())
                             goto Lisident;
                         auto m = Id.search(idbuf[]);
-                        if (m && m.flags & Id.IDmacro)
+                        if (m && m.flags & Id.IDmacro && !noExpand)
                         {
                             assert(!(m.flags & Id.IDinuse));
 
@@ -732,8 +733,16 @@ struct Lexer(R) if (isInputRange!R)
                     break;
 
                 case ESC.expand:
-                    assert(0);   // not handled yet
-                    break;
+                    static if (isContext)
+                    {
+                        src.expanded.popBack();
+                        src.popFront();
+                        noExpand = true;
+                        popFront();
+                        noExpand = false;
+                        return;
+                    }
+                    goto default;
 
                 default:
                     err_fatal(loc(), "unrecognized preprocessor token x%02x", c);

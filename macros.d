@@ -515,7 +515,7 @@ uchar[] macroExpandedText(Context)(Id* m, ustring[] args)
 {
     version (none)
     {
-        writefln("macro_replacement_text(m = '%s')", m.name);
+        //writefln("macro_replacement_text(m = '%s')", m.name);
         //writefln("\ttext = '%s'", m.text);
         write("\ttext = "); macrotext_print(m.text); writeln();
         for (size_t i = 1; i <= args.length; ++i)
@@ -597,7 +597,8 @@ uchar[] macroExpandedText(Context)(Id* m, ustring[] args)
 
                 default:
                     // If followed by CAT, don't expand
-                    if (m.text[q + 1] == ESC.start && m.text[q + 2] == ESC.concat)
+                    if (q + 4 < m.text.length &&
+                        m.text[q + 1] == ESC.start && m.text[q + 2] == ESC.concat)
                     {   expand = false;
                         trimright = true;
 
@@ -1031,7 +1032,12 @@ R macroScanArguments(R, S)(R r, size_t nparameters, bool variadic, out ustring[]
                 args ~= null;
 
             if (args.length != nparameters)
-                err_fatal("expected %d macro arguments, had %d", nparameters, args.length);
+            {
+                static if (__traits(compiles, r.loc()))
+                    err_fatal(r.loc(), "expected %d macro arguments, had %d", nparameters, args.length);
+                else
+                    err_fatal("expected %d macro arguments, had %d", nparameters, args.length);
+            }
             r.popFront();
             return r;
         }

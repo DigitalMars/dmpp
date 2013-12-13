@@ -118,6 +118,7 @@ struct Context(R)
 
     void pushFile(SrcFile* sf, bool isSystem)
     {
+        writefln("reading file %s", sf.filename);
         auto s = push();
         sourceFilei = sourcei;
         s.addFile(sf, isSystem, -1);
@@ -145,7 +146,9 @@ struct Context(R)
                 {
                     auto csf = currentSourceFile();
                     if (csf)
+                    {
                         csf.seenTokens = true;
+                    }
                 }
             }
             else if (tok == TOK.eof)
@@ -154,7 +157,9 @@ struct Context(R)
             {
                 auto csf = currentSourceFile();
                 if (csf)
+                {
                     csf.seenTokens = true;
+                }
 
                 do
                 {
@@ -257,6 +262,15 @@ struct Context(R)
     Source* currentSourceFile()
     {
         return sourceFilei == -1 ? null : &sources[sourceFilei];
+    }
+
+    Loc loc()
+    {
+        auto csf = currentSourceFile();
+        if (csf)
+            return csf.loc;
+        Loc loc;
+        return loc;
     }
 
     Source* push()

@@ -114,10 +114,12 @@ SrcFile* fileSearch(string filename, string[] paths, int starti, out int foundi)
     if (filenameCmp(filename, sf.filename))
     {   // Cache the normalized file name as a clone of the original unnormalized one
         auto sf2 = SrcFile.lookup(filename);
-        sf2.contents = sf.contents;
-        sf2.includeGuard = sf.includeGuard;
-        sf2.once = sf.once;
-        sf2.doesNotExist = sf.doesNotExist;
+        if (!sf2.contents)
+            sf2.contents = sf.contents;
+        if (!sf2.includeGuard)
+            sf2.includeGuard = sf.includeGuard;
+        sf2.once |= sf.once;
+        sf2.doesNotExist |= sf.doesNotExist;
         sf = sf2;
     }
     return sf;

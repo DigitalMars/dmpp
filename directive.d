@@ -271,24 +271,19 @@ bool parseDirective(R)(ref R r)
                     assert(!r.empty);
                     if (r.front == TOK.identifier && r.idbuf[] == "once")
                     {
-                        auto sf = r.src.currentSourceFile();
-                        if (sf)
-                            sf.loc.srcFile.once = true;
+                        auto csf = r.src.currentSourceFile();
+                        if (csf)
+                            csf.loc.srcFile.once = true;
 
                         // Turn off expanded output so this line is not emitted
                         r.src.expanded.off();
                         r.src.expanded.lineBuffer.initialize();
-                        while (1)
-                        {
-                            r.popFront();
-                            if (r.empty)
-                            {   r.src.expanded.on();
-                                goto Ldefault;
-                            }
-                            if (r.front == TOK.eol)
-                                break;
-                        }
+
+                        r.popFront();
+                        if (r.front != TOK.eol)
+                            err_fatal(r.loc(), "end of line expected following #pragma once");
                         r.src.expanded.on();
+                        r.src.expanded.put('\n');
                         r.src.expanded.put(r.src.front);
                         return true;
                     }
@@ -357,11 +352,11 @@ bool parseDirective(R)(ref R r)
                     r.src.expanded.off();
                     r.src.expanded.lineBuffer.initialize();
 
-                    r.popFront();
+                    r.popFrontNoExpand();
                     assert(!r.empty);
                     if (r.front != TOK.identifier)
                     {   r.src.expanded.on();
-                        err_fatal("identifier expected following #define");
+                        err_fatal("identifier expected following #undef");
                         return true;
                     }
 
@@ -371,7 +366,7 @@ bool parseDirective(R)(ref R r)
 
                     r.popFront();
                     if (r.front != TOK.eol)
-                        err_fatal("1end of line expected");
+                        err_fatal(r.loc(), "end of line expected following #undef");
 
                     r.src.expanded.on();
                     return true;
@@ -535,6 +530,8 @@ bool parseDirective(R)(ref R r)
                                 sf.ifstacki == r.src.ifstack.length() - 1)
                             {
                                 sf.seenTokens = false;
+                                r.src.ifstack.pop();
+                                return false;
                             }
                         }
                         r.src.ifstack.pop();
@@ -548,6 +545,10 @@ bool parseDirective(R)(ref R r)
                 case "include":
                 Linclude:
                 {
+                    auto sf = r.src.currentSourceFile();
+                    if (sf)
+                        sf.seenTokens = true;
+
                     // Turn off expanded output so this line is not emitted
                     r.src.expanded.off();
                     r.src.expanded.lineBuffer.initialize();
@@ -597,11 +598,11 @@ bool parseDirective(R)(ref R r)
                     r.src.popFront();
                     r.src.expanded.on();
                     r.popFront();
-                    return true;
+                    return false;
                 }
 
                 default:
-                    err_fatal("unrecognized preprocessing directive #%s", id);
+                    err_fatal(r.loc(), "unrecognized preprocessing directive #%s", id);
                     r.popFront();
                     return true;
             }
@@ -645,14 +646,14 @@ bool parseDirective(R)(ref R r)
             }
             if (r.empty || r.front != TOK.eol)
             {
-                err_fatal("8end of line expected");
+                err_fatal(r.loc(), "end of line expected after linemarker");
             }
             break;
         }
 
         case TOK.eol:
             r.popFront();
-            break;
+            return false;
 
         case TOK.eof:
         Leof:
@@ -660,7 +661,7 @@ bool parseDirective(R)(ref R r)
 
         default:
         Ldefault:
-            err_fatal("preprocessing directive expected");
+            err_fatal(r.loc(), "preprocessing directive expected");
             r.popFront();
             break;
     }
