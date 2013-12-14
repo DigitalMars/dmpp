@@ -337,7 +337,7 @@ struct Context(R)
                 break;
 
             case Id.IDfile:
-                return s.loc.srcFile.filename;
+                return cast(ustring)('"' ~ s.loc.srcFile.filename ~ '"');
 
             case Id.IDcounter:
                 n = counter++;
