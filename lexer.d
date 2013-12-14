@@ -425,6 +425,8 @@ struct Lexer(R) if (isInputRange!R)
                                     src.expanded.on();
                                     src.expanded.put('\n');
                                     src.expanded.put(cast(E)src.front);
+                                    front = TOK.eol;
+                                    return;
                                 }
                                 else
                                 {
