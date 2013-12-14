@@ -35,7 +35,14 @@ PPnumber Primary(Lexer)(ref Lexer r)
         case TOK.identifier:
             if (r.idbuf[] == "defined")
             {
+                bool sawParen;
+
                 r.popFront();
+                if (r.front == TOK.lparen)
+                {
+                    sawParen = true;
+                    r.popFront();
+                }
                 if (r.front != TOK.identifier)
                 {
                     static if (isContext)
@@ -52,6 +59,24 @@ PPnumber Primary(Lexer)(ref Lexer r)
                         if (m && m.flags & Id.IDmacro)
                             i.value = 1;
                         r.popFront();
+                        if (sawParen)
+                        {
+                            if (r.front != TOK.rparen)
+                                err_fatal(r.loc(), "')' expected");
+                            r.popFront();
+                        }
+                        return i;
+                    }
+                    else
+                    {
+                        PPnumber i;
+                        r.popFront();
+                        if (sawParen)
+                        {
+                            if (r.front != TOK.rparen)
+                                err_fatal("')' expected");
+                            r.popFront();
+                        }
                         return i;
                     }
                 }
