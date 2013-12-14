@@ -514,7 +514,7 @@ ustring getIthArg(ustring[] args, size_t argi)
     if (args.length < argi)
         return null;
     ustring a = args[argi - 1];
-    if (a == null)
+    if (a is null)
         a = null_arg; // so we can distinguish a missing arg (null_arg) from an empty arg ("")
     return a;
 }
