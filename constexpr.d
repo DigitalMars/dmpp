@@ -37,36 +37,42 @@ PPnumber Primary(Lexer)(ref Lexer r)
             {
                 bool sawParen;
 
-                r.popFront();
-                if (r.front == TOK.lparen)
+                if (isContext)
                 {
-                    sawParen = true;
-                    r.popFront();
-                }
-                if (r.front != TOK.identifier)
-                {
-                    static if (isContext)
+                    r.popFrontNoExpand();
+                    if (r.front == TOK.lparen)
+                    {
+                        sawParen = true;
+                        r.popFrontNoExpand();
+                    }
+                    if (r.front != TOK.identifier)
                         err_fatal(r.loc(), "identifier expected after 'defined'");
                     else
-                        err_fatal("identifier expected after 'defined'");
-                }
-                else
-                {
-                    static if (isContext)
                     {
                         PPnumber i;
                         auto m = Id.search(r.idbuf[]);
                         if (m && m.flags & Id.IDmacro)
                             i.value = 1;
-                        r.popFront();
+                        r.popFrontNoExpand();
                         if (sawParen)
                         {
                             if (r.front != TOK.rparen)
                                 err_fatal(r.loc(), "')' expected");
-                            r.popFront();
+                            r.popFrontNoExpand();
                         }
                         return i;
                     }
+                }
+                else
+                {
+                    r.popFront();
+                    if (r.front == TOK.lparen)
+                    {
+                        sawParen = true;
+                        r.popFront();
+                    }
+                    if (r.front != TOK.identifier)
+                        err_fatal("identifier expected after 'defined'");
                     else
                     {
                         PPnumber i;
@@ -80,6 +86,7 @@ PPnumber Primary(Lexer)(ref Lexer r)
                         return i;
                     }
                 }
+
             }
             break;
 
