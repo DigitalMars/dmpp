@@ -156,7 +156,8 @@ void macrosDefine(ustring def)
             default:
                 goto Lerror;
         }
-        text = macroReplacementList(objectLike, parameters, text ~ '\n');
+        text ~= '\n';
+        text = macroReplacementList(objectLike, parameters, text);
     }
 
     uint flags = Id.IDpredefined;
@@ -239,7 +240,7 @@ unittest
 
 bool parseDirective(R)(ref R r)
 {
-    r.popFront();
+    r.popFrontNoExpand();
     if (r.empty)
     {
         return false;
@@ -305,11 +306,11 @@ bool parseDirective(R)(ref R r)
                     r.src.expanded.off();
                     r.src.expanded.lineBuffer.initialize();
 
-                    r.popFront();
+                    r.popFrontNoExpand();
                     assert(!r.empty);
                     if (r.front != TOK.identifier)
                     {   r.src.expanded.on();
-                        err_fatal("identifier expected following #define");
+                        err_fatal(r.loc(), "identifier expected following #define");
                         return true;
                     }
 
@@ -327,8 +328,8 @@ bool parseDirective(R)(ref R r)
                         objectLike = false;
                         r.lexMacroParameters(variadic, parameters);
                     }
-                    auto definition = r.src.restOfLine();
-                    auto text = macroReplacementList(objectLike, parameters, definition);
+
+                    auto text = macroReplacementList(objectLike, parameters, r.src);
 
                     uint flags = 0;
                     if (variadic)

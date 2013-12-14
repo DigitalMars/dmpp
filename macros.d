@@ -60,20 +60,20 @@ enum ESC : ubyte
  *      replacement list with embedded commands for inserting arguments and stringizing
  */
 
-ustring macroReplacementList(bool objectLike, ustring[] parameters, const(uchar)[] text)
+ustring macroReplacementList(R)(bool objectLike, ustring[] parameters, ref R text)
 {
-    if (!text.length)
+    alias Unqual!(ElementEncodingType!R) E;
+
+    if (text.empty)
         return "";
 
-    assert(text.length && text[$ - 1] == '\n');
-
-    uchar[1000] tmpbuf = void;
+    E[1000] tmpbuf = void;
     auto outbuf = Textbuf!uchar(tmpbuf);
     outbuf.put(0);
 
     while (1)
-    {   uchar c = text[0];
-        text = text[1 .. $];
+    {   E c = cast(E)text.front;
+        text.popFront();
         switch (c)
         {
             case '\t':
@@ -119,7 +119,7 @@ ustring macroReplacementList(bool objectLike, ustring[] parameters, const(uchar)
             case '/':
                 if (outbuf.last() == '/')
                 {   // C++ style comments end the input
-                    text.skipCppComment();
+                    text = text.skipCppComment();
                     outbuf.pop();
                     goto case '\n';
                 }
@@ -136,8 +136,9 @@ ustring macroReplacementList(bool objectLike, ustring[] parameters, const(uchar)
 
 
             case '#':
-                if (text[0] == '#')
+                if (text.front == '#')
                 {
+                    text.popFront();
                     /* The ## token concatenation operator.
                      * Remove leading and trailing spaces, replace with ESC.start ESC.concat
                      */
@@ -147,7 +148,7 @@ ustring macroReplacementList(bool objectLike, ustring[] parameters, const(uchar)
                         err_fatal("## cannot appear at beginning of macro text");
                     outbuf.put(ESC.start);
                     outbuf.put(ESC.concat);
-                    text = text[1 .. $].skipWhitespace();
+                    text = text.skipWhitespace();
                     continue;
                 }
                 else if (!objectLike)
@@ -200,20 +201,33 @@ ustring macroReplacementList(bool objectLike, ustring[] parameters, const(uchar)
 unittest
 {
     ustring s;
-    s = macroReplacementList(true, null, "\n");
+    auto r = cast(ustring)"\n";
+    s = macroReplacementList(true, null, r);
     assert(s == "");
-    s = macroReplacementList(true, null, " \t/*hello*/ //\n");
+
+    r = cast(ustring)" \t/*hello*/ //\n";
+    s = macroReplacementList(true, null, r);
     assert(s == "");
-    s = macroReplacementList(true, null, "# \n");
+
+    r = cast(ustring)"# \n";
+    s = macroReplacementList(true, null, r);
     assert(s == "#");
-    s = macroReplacementList(true, null, "a ## /**/z\n");
+
+    r = cast(ustring)"a ## /**/z\n";
+    s = macroReplacementList(true, null, r);
     assert(s == "a" ~ ESC.start ~ ESC.concat ~ "z");
-    s = macroReplacementList(false, ["abc"], "x#/**/abc y\n");
+
+    r = cast(ustring)"x#/**/abc y\n";
+    s = macroReplacementList(false, ["abc"], r);
 //writefln("'%s', %s", s, s.length);
     assert(s == "x" ~ ESC.start ~ ESC.stringize ~ ESC.arg1 ~ " y");
-    s = macroReplacementList(false, ["abc"], "x  abc/**/y\n");
+
+    r = cast(ustring)"x  abc/**/y\n";
+    s = macroReplacementList(false, ["abc"], r);
     assert(s == "x " ~ ESC.start ~ ESC.arg1 ~ " y");
-    s = macroReplacementList(false, ["abc","a"], "x \"abc\" R\"a(abc)a\" 'a' \ry\n");
+
+    r = cast(ustring)"x \"abc\" R\"a(abc)a\" 'a' \ry\n";
+    s = macroReplacementList(false, ["abc","a"], r);
     assert(s == "x \"abc\" R\"a(abc)a\" 'a' y");
 }
 
