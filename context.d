@@ -277,7 +277,11 @@ struct Context(R)
     Source* push()
     {
         ++sourcei;
-        return &sources[sourcei];
+        auto s = &sources[sourcei];
+        s.isFile = false;
+        s.isExpanded = false;
+        s.seenTokens = false;
+        return s;
     }
 
     Source* pop()
