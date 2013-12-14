@@ -691,8 +691,9 @@ uchar[] macroExpandedText(Context)(Id* m, ustring[] args)
             {
                 //writefln("\t\tbefore '%s'", a);
                 auto s = macroExpand!Context(a);
-                //writefln("\t\tafter  '%s'", a);
+                //writefln("\t\tafter  '%s'", s);
                 auto t = trimEscWhiteSpace(s);
+                //writefln("\t\ttrim   '%s'", t);
                 buffer.put(t);
                 if (s.ptr) free(cast(void*)s.ptr);
             }
@@ -836,6 +837,7 @@ uchar[] macroExpand(Context)(const(uchar)[] text)
                                     if (q == '"')
                                     {
                                         r.popFront();
+                                        outbuf.put(q);
                                         r = r.skipRawStringLiteral(outbuf);
                                         continue;
                                     }
@@ -848,12 +850,14 @@ uchar[] macroExpand(Context)(const(uchar)[] text)
                                     if (q == '"')
                                     {
                                         r.popFront();
+                                        outbuf.put(q);
                                         r = r.skipStringLiteral(outbuf);
                                         continue;
                                     }
                                     if (q == '\'')
                                     {
                                         r.popFront();
+                                        outbuf.put(q);
                                         r = r.skipCharacterLiteral(outbuf);
                                         continue;
                                     }
