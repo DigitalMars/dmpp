@@ -113,16 +113,17 @@ struct Context(R)
         expanded.start(outrange);
 
         // Initialize source text
-        pushFile(sf, false);
+        pushFile(sf, false, -1);
     }
 
-    void pushFile(SrcFile* sf, bool isSystem)
+    void pushFile(SrcFile* sf, bool isSystem, int pathIndex)
     {
+        //write("pushFile ", pathIndex);
         if (params.verbose)
-            writefln("reading file %s", sf.filename);
+            writefln("reading %sfile %s", isSystem ? "system " : "", sf.filename);
         auto s = push();
         sourceFilei = sourcei;
-        s.addFile(sf, isSystem, -1);
+        s.addFile(sf, isSystem, pathIndex);
         if (lastloc.srcFile)
             uselastloc = true;
     }
@@ -354,10 +355,11 @@ struct Context(R)
 
     /*******************************************
      * Search for file along paths[]
+     * Output:
+     *  pathIndex       index of where file was found
      */
-    SrcFile* searchForFile(bool includeNext, out bool isSystem, const(char)[] s)
+    SrcFile* searchForFile(bool includeNext, out bool isSystem, const(char)[] s, out int pathIndex)
     {
-        int pathIndex = 0;
         if (isSystem)
         {
             pathIndex = sysIndex;
@@ -366,7 +368,9 @@ struct Context(R)
         {
             auto csf = currentSourceFile();
             if (csf && includeNext)
-                pathIndex = csf.pathIndex;
+            {
+                pathIndex = csf.pathIndex + 1;
+            }
         }
 
         auto sf = fileSearch(cast(string)s, paths, pathIndex, pathIndex);

@@ -813,7 +813,8 @@ void includeFile(R)(R ctx, bool includeNext, bool sysstring, const(char)[] s)
     if (csf && csf.loc.isSystem)
         sysstring = true;
 
-    auto sf = ctx.searchForFile(includeNext, sysstring, s);
+    int pathIndex;
+    auto sf = ctx.searchForFile(includeNext, sysstring, s, pathIndex);
     if (!sf)
     {
         err_fatal("#include file '%s' not found", s);
@@ -840,6 +841,6 @@ void includeFile(R)(R ctx, bool includeNext, bool sysstring, const(char)[] s)
         }
     }
 
-    ctx.pushFile(sf, sysstring);
+    ctx.pushFile(sf, sysstring, pathIndex);
 }
 
