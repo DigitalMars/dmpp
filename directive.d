@@ -396,8 +396,8 @@ bool parseDirective(R)(ref R r)
 
                     if (!cond)
                     {
-                        r.src.expanded.off();
                         r.skipFalseCond();
+                        return true;
                     }
 
                     r.src.expanded.on();
@@ -429,8 +429,8 @@ bool parseDirective(R)(ref R r)
 
                     if (!cond)
                     {
-                        r.src.expanded.off();
                         r.skipFalseCond();
+                        return true;
                     }
 
                     r.src.expanded.on();
@@ -770,8 +770,8 @@ void skipFalseCond(R)(ref R r)
 
                             // Skip the rest of the line
                             r.src.restOfLine();
-                            r.popFront();
                             r.src.expanded.on();
+                            r.popFront();
                             return;
                         }
                         r.src.ifstack.pop();

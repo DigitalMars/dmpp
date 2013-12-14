@@ -54,6 +54,7 @@ struct Expanded(R)
 
     void put(uchar c)
     {
+        //writefln("expanded.put('%c', %s)", c, noexpand);
         if (c != ESC.space && !noexpand)
         {
             if (lineBuffer.length && lineBuffer.last() == '\n')
@@ -117,6 +118,7 @@ struct Expanded(R)
                 lineBuffer.initialize();
                 ++lineNumber;
             }
+            //writefln("lineBuffer.put('%c')", c);
             lineBuffer.put(c);
         }
     }
