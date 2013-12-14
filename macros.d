@@ -686,10 +686,12 @@ uchar[] macroExpandedText(Context)(Id* m, ustring[] args)
             }
         L1:
             auto a = getIthArg(args, argi);
-            //writefln("\targ[%s] = '%s'", argi, a);
+            //writefln("\targ[%d] = '%s'", argi, a);
             if (expand)
             {
+                //writefln("\t\tbefore '%s'", a);
                 auto s = macroExpand!Context(a);
+                //writefln("\t\tafter  '%s'", a);
                 auto t = trimEscWhiteSpace(s);
                 buffer.put(t);
                 if (s.ptr) free(cast(void*)s.ptr);
@@ -871,6 +873,7 @@ uchar[] macroExpand(Context)(const(uchar)[] text)
                         if (m.flags & Id.IDinuse)
                         {
                             // Mark this identifier as being disabled
+                            outbuf.setLength(len);      // remove id from outbuf
                             outbuf.put(ESC.expand);
                             outbuf.put(m.name);
                             continue;
@@ -948,7 +951,6 @@ uchar[] macroExpand(Context)(const(uchar)[] text)
                                 break;
                             }
 
-writefln("test1 %s", m.name);
                             r = r.macroScanArguments(m.parameters.length,
                                     !!(m.flags & Id.IDdotdotdot),
                                      args, ctx);
