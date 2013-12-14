@@ -88,6 +88,14 @@ struct Context(R)
         setContext();
     }
 
+    /***************************
+     * Reset to use again.
+     */
+    void reset()
+    {
+        Id.reset();
+    }
+
     static Context* getContext()
     {
         return _ctx;

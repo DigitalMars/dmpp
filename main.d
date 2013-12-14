@@ -38,6 +38,9 @@ else
         // Preprocess each file
         foreach (i; 0 .. params.sourceFilenames.length)
         {
+            if (i)
+                context.reset();
+
             auto srcFilename = params.sourceFilenames[i];
             auto outFilename = params.outFilenames[i];
 

@@ -50,7 +50,7 @@ PPnumber Primary(Lexer)(ref Lexer r)
                     else
                     {
                         PPnumber i;
-                        auto m = Id.search(r.idbuf[]);
+                        auto m = Id.search(cast(ustring)r.idbuf[]);
                         if (m && m.flags & Id.IDmacro)
                             i.value = 1;
                         r.popFrontNoExpand();
