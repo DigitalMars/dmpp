@@ -948,6 +948,7 @@ uchar[] macroExpand(Context)(const(uchar)[] text)
                                 break;
                             }
 
+writefln("test1 %s", m.name);
                             r = r.macroScanArguments(m.parameters.length,
                                     !!(m.flags & Id.IDdotdotdot),
                                      args, ctx);
@@ -1040,7 +1041,9 @@ R macroScanArguments(R, S)(R r, size_t nparameters, bool variadic, out ustring[]
     {
         ustring arg;
         r = r.macroScanArgument(va_args, arg, s);
-        args ~= arg;
+
+        if (nparameters || arg.length)
+            args ~= arg;
 
         va_args = variadic && (args.length + 1 == nparameters);
 

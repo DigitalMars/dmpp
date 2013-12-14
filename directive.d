@@ -392,7 +392,6 @@ bool parseDirective(R)(ref R r)
                     r.src.ifstack.put(CONDif);
 
                     if (r.front != TOK.eol)
-writeln(r.front, " ", r.idbuf[]),
                         err_fatal(r.loc(), "end of line expected after #if expression");
 
                     if (!cond)
