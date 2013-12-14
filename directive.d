@@ -565,6 +565,7 @@ bool parseDirective(R)(ref R r)
                         r.src.popFront();
                         r.src.lexStringLiteral(stringbuf, '"', STR.f);
                         s = stringbuf[];
+                        r.popFront();
                     }
                     else if (r.src.front == '<')
                     {
@@ -572,30 +573,29 @@ bool parseDirective(R)(ref R r)
                         r.src.popFront();
                         s = stringbuf[];
                         r.src.lexStringLiteral(stringbuf, '>', STR.f);
+                        r.popFront();
                     }
                     else
                     {
                         r.needStringLiteral();
                         r.popFront();
                         if (r.front == TOK.string)
-                            r.popFront();
-                        else if (r.front == TOK.sysstring)
-                        {   sysstring = true;
-                            r.popFront();
+                        {
                         }
+                        else if (r.front == TOK.sysstring)
+                            sysstring = true;
                         else
-                            err_fatal("string expected");
-                        // The string is in r.idbuf[]
+                            err_fatal(r.loc(), "string expected");
                         s = r.getStringLiteral();
+                        r.popFront();
                     }
                     if (s.length == 0)
-                        err_fatal("filename expected");
-                    r.popFront();
+                        err_fatal(r.loc(), "filename expected");
                     if (r.front != TOK.eol)
                         err_fatal(r.loc(), "end of line expected following #include");
                     r.src.unget();
                     r.src.push('\n');
-                    r.src.includeFile(includeNext, sysstring, s);
+                    r.src.includeFile(includeNext, sysstring, s.idup);
                     r.src.popFront();
                     r.src.expanded.on();
                     r.popFront();
@@ -619,19 +619,25 @@ bool parseDirective(R)(ref R r)
             if (!sf)
                 return true;
             sf.loc.lineNumber = cast(uint)(r.number.value - 1);
+
+            char[32] tmpbuf = void;
+            auto stringbuf = Textbuf!char(tmpbuf);
+            stringbuf.initialize();
+
             r.needStringLiteral();
             r.popFront();
             if (r.empty || r.front == TOK.eol)
                 break;
             while (!r.empty && r.front == TOK.string)
             {
+                auto s = cast(string)r.getStringLiteral();
+                stringbuf.put(s);       // append to stringbuf[]
                 r.popFront();
             }
-            // The string is in r.idbuf[]
-            auto s = cast(string)r.getStringLiteral();
 
             // s is the new "source file"
-            auto srcfile = SrcFile.lookup(s.idup);
+            auto srcfile = SrcFile.lookup(stringbuf[].idup);
+            stringbuf.free();
             srcfile.contents = sf.loc.srcFile.contents;
             srcfile.includeGuard = sf.loc.srcFile.includeGuard;
             srcfile.once = sf.loc.srcFile.once;
@@ -796,7 +802,7 @@ void skipFalseCond(R)(ref R r)
  * Input:
  *      includeNext     if it was #include_next
  *      system          if <file>
- *      s               the filename string in transient buffer
+ *      s               the filename string
  */
 
 void includeFile(R)(R ctx, bool includeNext, bool sysstring, const(char)[] s)

@@ -240,8 +240,8 @@ struct Context(R)
 
     void unget()
     {
-        assert(sources[sourcei].texti);
-        --sources[sourcei].texti;
+        if (sourcei >= 0 && sources[sourcei].texti)
+            --sources[sourcei].texti;
     }
 
     void push(uchar c)

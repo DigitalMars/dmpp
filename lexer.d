@@ -22,6 +22,7 @@ import number;
 import ranges;
 import skip;
 import stringlit;
+import textbuf;
 
 /**
  * Only a relatively small number of tokens are of interest to the preprocessor.
@@ -96,20 +97,22 @@ struct Lexer(R) if (isInputRange!R)
 
     StaticArrayBuffer!(E, 1024) idbuf = void;
 
+    E[16] tmpbuf;
+    Textbuf!E stringbuf;
     bool stringLiteral;
+
     bool noMacroExpand;
     bool noExpand;
 
     void needStringLiteral()
     {
-        idbuf.init();           // put the string literal in idbuf[]
         stringLiteral = true;
     }
 
     E[] getStringLiteral()
     {
         stringLiteral = false;
-        return idbuf[];
+        return stringbuf[];
     }
 
     enum empty = false;         // return TOK.eof for going off the end
@@ -234,7 +237,8 @@ struct Lexer(R) if (isInputRange!R)
                     {
                         if (stringLiteral)
                         {
-                            src = src.lexStringLiteral(idbuf, '>', STR.f);
+                            stringbuf.initialize();
+                            src = src.lexStringLiteral(stringbuf, '>', STR.f);
                             front = TOK.sysstring;
                             return;
                         }
@@ -461,7 +465,8 @@ struct Lexer(R) if (isInputRange!R)
                     {
                         if (stringLiteral)
                         {
-                            src = src.lexStringLiteral(idbuf, '"', STR.f);
+                            stringbuf.initialize();
+                            src = src.lexStringLiteral(stringbuf, '"', STR.f);
                             front = TOK.string;
                             return;
                         }
@@ -700,7 +705,8 @@ struct Lexer(R) if (isInputRange!R)
                                         src.popFront();
                                         if (stringLiteral)
                                         {
-                                            src = src.lexStringLiteral(idbuf, '"', STR.f);
+                                            stringbuf.initialize();
+                                            src = src.lexStringLiteral(stringbuf, '"', STR.f);
                                             front = TOK.string;
                                             return;
                                         }
@@ -785,6 +791,7 @@ auto createLexer(R)(R r)
 {
     Lexer!R lexer;
     lexer.src = r;
+    lexer.stringbuf = Textbuf!(lexer.E)(lexer.tmpbuf);
     lexer.popFront();   // 'prime' the pump
     return lexer;
 }
