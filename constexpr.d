@@ -37,7 +37,12 @@ PPnumber Primary(Lexer)(ref Lexer r)
             {
                 r.popFront();
                 if (r.front != TOK.identifier)
-                    err_fatal("identifier expected");
+                {
+                    static if (isContext)
+                        err_fatal(r.loc(), "identifier expected after 'defined'");
+                    else
+                        err_fatal("identifier expected after 'defined'");
+                }
                 else
                 {
                     static if (isContext)

@@ -56,13 +56,13 @@ void lexMacroParameters(R)(ref R r, out bool variadic, out ustring[] parameters)
             case TOK.identifier:
                 auto id = cast(ustring)r.idbuf[];
                 if (params.countUntil(id) >= 0)
-                    err_fatal("multiple parameter '%s'", id);
+                    err_fatal(r.loc(), "multiple macro parameters named '%s'", id);
                 params ~= id.idup;
-                r.popFront();
+                r.popFrontNoExpand();
                 switch (r.front)
                 {
                     case TOK.comma:
-                        r.popFront();
+                        r.popFrontNoExpand();
                         continue;
 
                     case TOK.dotdotdot:
@@ -70,14 +70,14 @@ void lexMacroParameters(R)(ref R r, out bool variadic, out ustring[] parameters)
                         continue;
 
                     default:
-                        err_fatal("')' expected");
+                        err_fatal(r.loc(), "')' expected to close macro parameter list");
                         return;
                 }
 
             case TOK.dotdotdot:
                 variadic = true;
                 params ~= cast(ustring)"__VA_ARGS__";
-                r.popFront();
+                r.popFrontNoExpand();
                 if (r.front != TOK.rparen)
                 {
                     err_fatal("')' expected");
@@ -86,7 +86,7 @@ void lexMacroParameters(R)(ref R r, out bool variadic, out ustring[] parameters)
                 break;
 
             default:
-                err_fatal("identifier expected");
+                err_fatal(r.loc(), "identifier expected for macro parameter");
                 return;
         }
     }
@@ -322,9 +322,9 @@ bool parseDirective(R)(ref R r)
 
                     if (r.src.front == '(')
                     {
-                        r.popFront();
+                        r.popFrontNoExpand();
                         assert(r.front == TOK.lparen);
-                        r.popFront();
+                        r.popFrontNoExpand();
                         objectLike = false;
                         r.lexMacroParameters(variadic, parameters);
                     }
@@ -357,7 +357,7 @@ bool parseDirective(R)(ref R r)
                     assert(!r.empty);
                     if (r.front != TOK.identifier)
                     {   r.src.expanded.on();
-                        err_fatal("identifier expected following #undef");
+                        err_fatal(r.loc(), "identifier expected following #undef");
                         return true;
                     }
 
