@@ -33,13 +33,20 @@ SRCS=main.d cmdline.d context.d id.d skip.d macros.d textbuf.d ranges.d outdeps.
 	lexer.d constexpr.d number.d stringlit.d sources.d loc.d expanded.d \
 	directive.d
 
+DOCS=dmpp.dd
+
 MAKEFILES=win32.mak posix.mak
+
+targets : dmpp dmpp
 
 dmpp.exe : $(SRCS)
 	$(DMD) -g $(SRCS) -ofdmpp
 
 unittest : $(SRCS)
 	$(DMD) -g $(SRCS) -ofdmpp -unittest -cov
+
+dmpp.html : dmpp.dd
+	$(DMD) dmpp.dd -D
 
 clean:
 	$(DEL) dmpp
@@ -48,14 +55,13 @@ detab:
 	$(DETAB) $(SRCS)
 
 tolf:
-	$(TOLF) $(SRCS) $(MAKEFILES)
+	$(TOLF) $(SRCS) $(MAKEFILES) $(DOCS)
 
 zip: detab tolf $(MAKEFILES)
 	$(DEL) dmppsrc.zip
-	$(ZIP) dmppsrc $(MAKEFILES)
-	$(ZIP) dmppsrc $(SRCS)
+	$(ZIP) dmppsrc $(MAKEFILES) $(DOCS) $(SRCS)
 
 
 scp: detab tolf $(MAKEFILES)
-	$(SCP) $(MAKEFILES) $(SRCS) $(SCPDIR)/
+	$(SCP) $(MAKEFILES) $(SRCS) $(DOCS) $(SCPDIR)/
 

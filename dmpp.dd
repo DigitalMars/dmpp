@@ -1,0 +1,67 @@
+Ddoc
+
+$(P dmpp is a C preprocessor. It reads source files in C or C++, and
+generates a preprocessed output file.
+)
+
+$(TABLE2 Options,
+  $(TR $(TH Option)                      $(TH Description))
+  $(TR $(TD $(I filename)...)            $(TD source file name(s)))
+  $(TR $(TD $(B -D) $(I name)[($(I args))][=$(I value)])  $(TD define macro $(I name)))
+  $(TR $(TD $(B --dep) $(I filename))    $(TD generate dependencies to output file))
+  $(TR $(TD $(B -I) $(I path))           $(TD path to $(TT #include) files))
+  $(TR $(TD $(B --isystem) $(I path))    $(TD path to system $(TT #include) files))
+  $(TR $(TD $(B -o) $(I filename))       $(TD preprocessed output file))
+  $(TR $(TD $(B -v))                     $(TD verbose))
+)
+
+$(SECTION2 Features:,
+
+$(OL
+   $(LI Will process multiple source files at the same time. This increases speed
+        because the contents of $(TT #include) files are cached.)
+   $(LI If output files are not specified, a default file name is generated
+	from the source file name with the extension replaced with $(TT .i))
+   $(LI The only predefined macros are $(TT __BASE_FILE__, __FILE__, __LINE__, __COUNTER__,
+	__TIMESTAMP__, __DATE__, and __TIME__). Any others desired should be
+	set via the command line.)
+)
+)
+
+$(SECTION2 Extensions:,
+
+$(OL
+   $(LI supports $(TT #pragma once))
+   $(LI supports $(TT #pragma GCC system_header))
+   $(LI supports $(LINK2 http://gcc.gnu.org/onlinedocs/cpp/Preprocessor-Output.html, linemarker) output)
+   $(LI supports $(TT ,##__VA_ARGS__) extension which elides the comma)
+   $(LI $(TT __COUNTER__ and __BASE_FILE__) predefined macros)
+)
+)
+
+$(SECTION2 Bugs:,
+
+$(OL
+   $(LI trigraphs not supported)
+   $(LI digraphs not supported)
+   $(LI \u or \U in identifiers not supported)
+   $(LI C++ alternate keywords not supported)
+   $(LI multibyte Japanese, Chinese, or Korean characters not supported in source code)
+   $(LI Unicode (UTF8) not supported in source code)
+)
+)
+
+Macros:
+TITLE=dmpp
+COPYRIGHT= Copyright (c) 2013 by $(LINK2 http://www.digitalmars.com, Digital Mars) All Rights Reserved
+TABLE1 = <table border=1 cellpadding=4 cellspacing=0>$0</table>
+TABLE2 = <table border=1 cellpadding=4 cellspacing=0 class="table2"><caption>$1</caption>$+</table>
+TH=<th scope="col" class="table2">$0</th>
+BLOCKQUOTE = <blockquote><p>$0</p></blockquote>
+TT=<tt>$0</tt>
+SUB=<sub>$0</sub>
+LNAME2=<a name="$1">$+</a>
+SECTION1=<h1>$1</h1>$+
+SECTION2=<h2>$1</h2>$+
+SECTION3=<h3>$1</h3>$+
+SECTION4=<h4>$1</h4>$+
