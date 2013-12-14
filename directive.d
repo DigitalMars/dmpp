@@ -240,6 +240,11 @@ unittest
 
 bool parseDirective(R)(ref R r)
 {
+    // Ensure the '#' is left-justified in the output
+    r.src.expanded.lineBuffer.initialize();
+    r.src.expanded.put('#');
+    r.src.expanded.put(cast(uchar)r.src.front);
+
     r.popFrontNoExpand();
     if (r.empty)
     {
