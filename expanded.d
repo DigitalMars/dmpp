@@ -44,7 +44,9 @@ struct Expanded(R)
     void start(R foutr)
     {
         this.foutr = foutr;
-        lineBuffer.initialize();
+        this.lineBuffer.initialize();
+        this.noexpand = 0;
+        this.lineNumber = 1;
     }
 
     void finish()

@@ -38,10 +38,10 @@ import sources;
 
 struct Context(R)
 {
-    const Params params;        // command line parameters
+    const Params params;      // command line parameters
 
-    string[] paths;     // #include paths
-    size_t sysIndex;    // paths[sysIndex] is start of system #includes
+    const string[] paths;     // #include paths
+    const size_t sysIndex;    // paths[sysIndex] is start of system #includes
 
     bool errors;        // true if any errors occurred
     uint counter;       // for __COUNTER__
@@ -75,7 +75,9 @@ struct Context(R)
         this.params = params;
         this.doDeps = params.depFilename.length != 0;
 
-        combineSearchPaths(params.includes, params.sysincludes, paths, sysIndex);
+        string[] pathsx;
+        combineSearchPaths(params.includes, params.sysincludes, pathsx, sysIndex);
+        paths = pathsx;         // workaround for Bugzilla 11743
 
         foreach (i; 0 .. sources.length)
         {
@@ -94,6 +96,13 @@ struct Context(R)
     void reset()
     {
         Id.reset();
+        SrcFile.reset();
+
+        counter = 0;
+        ifstack.initialize();
+        xc = ' ';
+        lastloc = lastloc.init;
+        uselastloc = false;
     }
 
     static Context* getContext()

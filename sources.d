@@ -10,6 +10,7 @@
 
 module sources;
 
+import core.memory;
 import std.file;
 import std.path;
 import std.stdio;
@@ -29,10 +30,10 @@ struct SrcFile
     bool once;                  // set if #pragma once set
     bool doesNotExist;          // file does not exist
 
+    __gshared SrcFile[string] table;
+
     static SrcFile* lookup(string filename)
     {
-        __gshared SrcFile[string] table;
-
         SrcFile sf;
         sf.filename = filename;
         auto p = filename in table;
@@ -42,6 +43,30 @@ struct SrcFile
             p = filename in table;
         }
         return p;
+    }
+
+    /*******************************
+     * Reset in between processing source files
+     */
+    static void reset()
+    {
+        foreach (ref sf; table)
+        {
+            /* Just need to reset 'once', otherwise the files
+             * will be skipped instead of read.
+             */
+            sf.once = false;
+        }
+    }
+
+    /*******************************
+     * Release the contents of this source file.
+     * It'll get re-read if needed.
+     */
+    void freeContents()
+    {
+        GC.free(cast(void*)contents.ptr);
+        contents = null;
     }
 
     /*******************************
@@ -83,7 +108,7 @@ struct SrcFile
  *      fully qualified filename if found, null if not
  */
 
-SrcFile* fileSearch(string filename, string[] paths, int starti, out int foundi)
+SrcFile* fileSearch(string filename, const string[] paths, int starti, out int foundi)
 {
     foundi = paths.length;
 

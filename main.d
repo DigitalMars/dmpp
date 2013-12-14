@@ -61,6 +61,11 @@ else
             context.localFinish();
 
             delete fout;
+
+            /* The one source file we don't need to cache the contents
+             * of is the .c file.
+             */
+            sf.freeContents();
         }
 
         context.globalFinish();
