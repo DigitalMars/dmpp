@@ -286,6 +286,8 @@ R skipFloat(R, S)(R r, ref S s, bool hex, bool sawdot, bool isexponent)
 
     E c = get();
 
+    bool isfloat = sawdot | isexponent;
+
     if (isexponent)
         goto Lisexponent;
 
@@ -319,6 +321,7 @@ R skipFloat(R, S)(R r, ref S s, bool hex, bool sawdot, bool isexponent)
     {
         if (c == '.')
         {
+            isfloat = true;
             s.put(c);
             r.popFront();
             if (r.empty)
@@ -395,7 +398,7 @@ Lisexponent:
             break;
         }
     }
-    else if (hex)
+    else if (hex && isfloat)
         err_fatal("exponent required for hex float");
 
     if (c == 'f' || c == 'F' || c == 'l' || c == 'L')
