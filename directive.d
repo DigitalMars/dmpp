@@ -293,6 +293,24 @@ bool parseDirective(R)(ref R r)
                         r.src.expanded.put(r.src.front);
                         return true;
                     }
+                    if (r.front == TOK.identifier && r.idbuf[] == "GCC")
+                    {
+                        r.popFront();
+                        if (r.front == TOK.identifier && r.idbuf[] == "system_header")
+                        {
+                            // Turn off expanded output so this line is not emitted
+                            r.src.expanded.off();
+                            r.src.expanded.lineBuffer.initialize();
+
+                            r.popFront();
+                            if (r.front != TOK.eol)
+                                err_fatal(r.loc(), "end of line expected following #pragma GCC system_header");
+                            r.src.expanded.on();
+                            r.src.expanded.put('\n');
+                            r.src.expanded.put(r.src.front);
+                            return true;
+                        }
+                    }
                     /* Ignore the directive
                      */
                     while (1)
