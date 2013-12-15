@@ -79,10 +79,7 @@ struct Context(R)
         combineSearchPaths(params.includes, params.sysincludes, pathsx, sysIndex);
         paths = pathsx;         // workaround for Bugzilla 11743
 
-        foreach (i; 0 .. sources.length)
-        {
-            sources[i].lineBuffer = Textbuf!uchar(sources[i].tmpbuf);
-        }
+        Source.initialize(sources, null, null);
 
         ifstack = Textbuf!ubyte(tmpbuf);
         ifstack.initialize();
@@ -296,15 +293,25 @@ struct Context(R)
 
     Source* push()
     {
-        if (psource)
-            ++psource;
-        else
-            psource = sources.ptr;
         auto s = psource;
-        assert(s < sources.ptr + sources.length);
+        if (s)
+        {
+            s = s.next;
+            if (!s)
+            {
+                // Ran out of space, allocate another chunk
+                auto sources2 = new Source[10];
+                Source.initialize(sources2, psource, &psource.next);
+                s = psource.next;
+                assert(s);
+            }
+        }
+        else
+            s = sources.ptr;
         s.isFile = false;
         s.isExpanded = false;
         s.seenTokens = false;
+        psource = s;
         return s;
     }
 
@@ -313,19 +320,13 @@ struct Context(R)
         auto s = psource;
         if (s.isFile)
         {
-            // Back up and find previous file; -1 if none
+            // Back up and find previous file; null if none
             if (psourceFile == s)
             {
-                auto ps = s;
-                while (1)
+                for (auto ps = s; 1;)
                 {
-                    if (ps == sources.ptr)
-                    {
-                        psourceFile = null;
-                        break;
-                    }
-                    --ps;
-                    if (ps.isFile)
+                    ps = ps.prev;
+                    if (!ps || ps.isFile)
                     {
                         psourceFile = ps;
                         break;
@@ -340,7 +341,7 @@ struct Context(R)
                 s.loc.srcFile.includeGuard = s.includeGuard;
             }
         }
-        psource = (psource == sources.ptr) ? null : psource - 1;
+        psource = psource.prev;
         return psource;
     }
 
@@ -459,6 +460,10 @@ R readLine(R, S)(R r, ref S s)
 
 struct Source
 {
+    // Double linked list of stack of Source's
+    Source* prev;
+    Source* next;
+
     // These are if isFile is true
     Loc loc;            // current location
     ustring input;      // remaining file contents
@@ -474,6 +479,26 @@ struct Source
     bool isFile;        // if it is a file
     bool isExpanded;    // true if already macro expanded
     bool seenTokens;    // true if seen tokens
+
+    /*****
+     * Instead of constructing them individually, do them as a group,
+     * necessary to sew together the linked list.
+     */
+    static void initialize(Source[] sources, Source* prev, Source** pNext)
+    {
+        foreach (ref src; sources)
+        {
+            src.prev = prev;
+            prev = &src;
+
+            if (pNext)
+                *pNext = &src;
+            pNext = &src.next;
+            src.next = null;
+
+            src.lineBuffer = Textbuf!uchar(src.tmpbuf);
+        }
+    }
 
     void addFile(SrcFile* sf, bool isSystem, int pathIndex)
     {
@@ -546,7 +571,7 @@ version (unittest)
     }
 }
 
-version (none)
+version (all)
 {
 unittest
 {
