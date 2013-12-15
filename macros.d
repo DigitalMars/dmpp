@@ -996,6 +996,8 @@ uchar[] macroExpand(Context)(const(uchar)[] text)
     }
 
 Ldone:
+    ctx.localFinish();
+
     // Restore previous context
     ctx.setContext();
     ctx.expanded.on();

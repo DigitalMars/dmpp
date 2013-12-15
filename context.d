@@ -36,6 +36,8 @@ import sources;
  *      R       output range for preprocessor output
  */
 
+//debug=ContextStats;
+
 struct Context(R)
 {
     const Params params;      // command line parameters
@@ -49,9 +51,15 @@ struct Context(R)
     bool doDeps;        // true if doing dependency file generation
     string[] deps;      // dependency file contents
 
-    Source[10] sources;
+    Source[4] sources;  // rare that more than 4 is needed by macroExpand()
     Source* psource;
     Source* psourceFile;
+
+    debug (ContextStats)
+    {
+        int sourcei;
+        int sourceimax;
+    }
 
     uchar xc = ' ';
 
@@ -192,6 +200,11 @@ struct Context(R)
     void localFinish()
     {
         expanded.finish();
+
+        debug (ContextStats)
+        {
+            writefln("max Source depth = %d", sourceimax);
+        }
     }
 
     /**********
@@ -300,7 +313,7 @@ struct Context(R)
             if (!s)
             {
                 // Ran out of space, allocate another chunk
-                auto sources2 = new Source[10];
+                auto sources2 = new Source[16];
                 Source.initialize(sources2, psource, &psource.next);
                 s = psource.next;
                 assert(s);
@@ -312,6 +325,14 @@ struct Context(R)
         s.isExpanded = false;
         s.seenTokens = false;
         psource = s;
+
+        debug (ContextStats)
+        {
+            ++sourcei;
+            if (sourcei > sourceimax)
+                sourceimax = sourcei;
+        }
+
         return s;
     }
 
@@ -342,6 +363,10 @@ struct Context(R)
             }
         }
         psource = psource.prev;
+        debug (ContextStats)
+        {
+            --sourcei;
+        }
         return psource;
     }
 
