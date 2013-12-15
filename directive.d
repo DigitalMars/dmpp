@@ -80,7 +80,7 @@ void lexMacroParameters(R)(ref R r, out bool variadic, out ustring[] parameters)
                 r.popFrontNoExpand();
                 if (r.front != TOK.rparen)
                 {
-                    err_fatal("')' expected");
+                    err_fatal(r.loc(), "')' expected after ...");
                     return;
                 }
                 break;
@@ -363,7 +363,7 @@ bool parseDirective(R)(ref R r)
                     auto m = Id.defineMacro(macid, parameters, text, flags);
                     if (!m)
                     {
-                        err_fatal("redefinition of macro %s", id);
+                        err_fatal(r.loc(), "redefinition of macro %s", id);
                     }
                     r.src.expanded.on();
                     r.front = TOK.eol;
@@ -398,7 +398,7 @@ bool parseDirective(R)(ref R r)
 
                 case "error":
                     auto msg = r.src.restOfLine();
-                    err_fatal("%s", msg);
+                    err_fatal(r.loc(), "%s", msg);
                     return true;
 
                 case "if":
@@ -500,9 +500,9 @@ bool parseDirective(R)(ref R r)
                     r.src.expanded.lineBuffer.initialize();
                     r.popFront();
                     if (r.front != TOK.eol)
-                        err_fatal("5end of line expected");
+                        err_fatal(r.loc(), "end of line expected after #else");
                     if (r.src.ifstack.length == 0 || r.src.ifstack.last() == CONDendif)
-                        err_fatal("#else by itself");
+                        err_fatal(r.loc(), "#else by itself");
                     else
                     {
                         r.src.ifstack.pop();
@@ -538,12 +538,12 @@ bool parseDirective(R)(ref R r)
                     r.src.expanded.lineBuffer.initialize();
                     r.popFront();
                     if (r.front != TOK.eol)
-                        err_fatal("6end of line expected");
+                        err_fatal(r.loc(), "end of line expected after #endif");
                     r.src.expanded.on();
                     r.src.expanded.put('\n');
                     r.src.expanded.put(r.src.front);
                     if (r.src.ifstack.length == 0)
-                        err_fatal("#endif by itself");
+                        err_fatal(r.loc(), "#endif by itself");
                     else
                     {
                         if (r.src.ifstack.last() == CONDguard)
@@ -731,7 +731,7 @@ void skipFalseCond(R)(ref R r)
                         final switch (r.src.ifstack.last())
                         {
                             case CONDendif:
-                                err_fatal("#elif not following #if");
+                                err_fatal(r.loc(), "#elif not following #if");
                                 break;
 
                             case CONDif:
@@ -746,7 +746,7 @@ void skipFalseCond(R)(ref R r)
                                     r.src.ifstack.put(CONDif);
 
                                     if (r.front != TOK.eol)
-                                        err_fatal(r.loc, "end of line expected following #elif expr");
+                                        err_fatal(r.loc(), "end of line expected following #elif expr");
 
                                     if (cond)
                                     {
@@ -766,7 +766,7 @@ void skipFalseCond(R)(ref R r)
                         final switch (r.src.ifstack.last())
                         {
                             case CONDendif:
-                                err_fatal("#else not following #if");
+                                err_fatal(r.loc(), "#else not following #if");
                                 break;
 
                             case CONDif:
@@ -817,7 +817,7 @@ void skipFalseCond(R)(ref R r)
             r.popFront();
         }
     }
-    err_fatal("end of file found before #endif");
+    err_fatal(r.loc(), "end of file found before #endif");
 }
 
 /*************************************
@@ -840,7 +840,7 @@ void includeFile(R)(R ctx, bool includeNext, bool sysstring, const(char)[] s)
     auto sf = ctx.searchForFile(includeNext, sysstring, s, pathIndex);
     if (!sf)
     {
-        err_fatal("#include file '%s' not found", s);
+        err_fatal(ctx.loc(), "#include file '%s' not found", s);
         return;
     }
 
