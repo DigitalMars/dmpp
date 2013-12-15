@@ -50,8 +50,8 @@ struct Context(R)
     string[] deps;      // dependency file contents
 
     Source[10] sources;
-    int sourcei = -1;
-    int sourceFilei = -1;
+    Source* psource;
+    Source* psourceFile;
 
     uchar xc = ' ';
 
@@ -139,7 +139,7 @@ struct Context(R)
         if (params.verbose)
             writefln("reading %sfile %s", isSystem ? "system " : "", sf.filename);
         auto s = push();
-        sourceFilei = sourcei;
+        psourceFile = s;
         s.addFile(sf, isSystem, pathIndex);
         if (lastloc.srcFile)
             uselastloc = true;
@@ -222,7 +222,7 @@ struct Context(R)
     {
         while (1)
         {
-            auto s = &sources[sourcei];
+            auto s = psource;
             if (s.texti < s.lineBuffer.length)
             {
                 xc = s.lineBuffer[s.texti];
@@ -249,7 +249,7 @@ struct Context(R)
 
     uchar[] restOfLine()
     {
-        auto s = &sources[sourcei];
+        auto s = psource;
         auto result = s.lineBuffer[s.texti .. s.lineBuffer.length];
         s.texti = s.lineBuffer.length;
         xc = '\n';
@@ -258,8 +258,10 @@ struct Context(R)
 
     void unget()
     {
-        if (sourcei >= 0 && sources[sourcei].texti)
-            --sources[sourcei].texti;
+        if (psource && psource.texti)
+        {
+            --psource.texti;
+        }
     }
 
     void push(uchar c)
@@ -280,7 +282,7 @@ struct Context(R)
 
     Source* currentSourceFile()
     {
-        return sourceFilei == -1 ? null : &sources[sourceFilei];
+        return psourceFile;
     }
 
     Loc loc()
@@ -294,8 +296,12 @@ struct Context(R)
 
     Source* push()
     {
-        ++sourcei;
-        auto s = &sources[sourcei];
+        if (psource)
+            ++psource;
+        else
+            psource = sources.ptr;
+        auto s = psource;
+        assert(s < sources.ptr + sources.length);
         s.isFile = false;
         s.isExpanded = false;
         s.seenTokens = false;
@@ -304,19 +310,24 @@ struct Context(R)
 
     Source* pop()
     {
-        auto s = &sources[sourcei];
+        auto s = psource;
         if (s.isFile)
         {
             // Back up and find previous file; -1 if none
-            if (sourceFilei == sourcei)
+            if (psourceFile == s)
             {
-                auto i = sourcei;
+                auto ps = s;
                 while (1)
                 {
-                    --i;
-                    if (i < 0 || sources[i].isFile)
+                    if (ps == sources.ptr)
                     {
-                        sourceFilei = i;
+                        psourceFile = null;
+                        break;
+                    }
+                    --ps;
+                    if (ps.isFile)
+                    {
+                        psourceFile = ps;
                         break;
                     }
                 }
@@ -329,13 +340,13 @@ struct Context(R)
                 s.loc.srcFile.includeGuard = s.includeGuard;
             }
         }
-        --sourcei;
-        return sourcei == -1 ? null : &sources[sourcei];
+        psource = (psource == sources.ptr) ? null : psource - 1;
+        return psource;
     }
 
-    bool isExpanded() { return sources[sourcei].isExpanded; }
+    bool isExpanded() { return psource.isExpanded; }
 
-    void setExpanded() { sources[sourcei].isExpanded = true; }
+    void setExpanded() { psource.isExpanded = true; }
 
     /***************************
      * Return text associated with predefined macro.
