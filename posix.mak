@@ -39,7 +39,7 @@ MAKEFILES=win32.mak posix.mak
 
 targets : dmpp dmpp
 
-dmpp.exe : $(SRCS)
+dmpp : $(SRCS)
 	$(DMD) -g $(SRCS) -ofdmpp
 
 unittest : $(SRCS)

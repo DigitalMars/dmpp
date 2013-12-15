@@ -248,7 +248,7 @@ struct Context(R)
     {
         auto s = psource;
         auto result = s.lineBuffer[s.texti .. s.lineBuffer.length];
-        s.texti = s.lineBuffer.length;
+        s.texti = cast(uint)s.lineBuffer.length;
         xc = '\n';
         return result;
     }
@@ -391,7 +391,7 @@ struct Context(R)
     {
         if (isSystem)
         {
-            pathIndex = sysIndex;
+            pathIndex = cast(int)sysIndex;
         }
         else
         {

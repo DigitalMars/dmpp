@@ -477,29 +477,29 @@ unittest
 {
     auto s = stringize(cast(ustring)"  ");
     assert(s == `""`);
-    if (s.ptr) free(s.ptr);
+    //if (s.ptr) free(s.ptr);
 
     s = stringize(cast(ustring)(" " ~ ESC.space ~ "" ~ ESC.brk ~ "a" ~ ESC.expand ~ "" ~ ESC.brk ~ "bc" ~ ESC.space ~ "" ~ ESC.brk ~ " "));
     assert(s == `"abc"`);
-    free(s.ptr);
+    //free(s.ptr);
 
     s = stringize(cast(ustring)(`ab?\\x'y'"z"`));
     assert(s == `"ab\?\\x'y'\"z\""`);
-    free(s.ptr);
+    //free(s.ptr);
 
     s = stringize(cast(ustring)(`'\'a\\'b\`));
     assert(s == `"'\\'a\\\\'b\"`);
-    free(s.ptr);
+    //free(s.ptr);
 
     s = stringize(cast(ustring)(`"R"x(aa)x""`));
     assert(s == `"\"R\"x(aa)x\"\""`);
-    free(s.ptr);
+    //free(s.ptr);
 
     ubyte[] u = cast(ubyte[])"R\"x(a?\\a)x\"";
     s = stringize(cast(ustring)u);
 //writefln("'%s', %s", s, s.length);
     assert(s == `"R\"x(a\?\\a)x\""`);
-    free(s.ptr);
+    //free(s.ptr);
 }
 
 
@@ -695,7 +695,7 @@ uchar[] macroExpandedText(Context)(Id* m, ustring[] args)
                 auto t = trimEscWhiteSpace(s);
                 //writefln("\t\ttrim   '%s'", t);
                 buffer.put(t);
-                if (s.ptr) free(cast(void*)s.ptr);
+                //if (s.ptr) free(cast(void*)s.ptr);
             }
             else
             {
@@ -716,8 +716,8 @@ uchar[] macroExpandedText(Context)(Id* m, ustring[] args)
             buffer.put(m.text[q]);
     }
 
-    foreach (arg; args)
-        if (arg.ptr) free(cast(void*)arg.ptr);
+    //foreach (arg; args)
+        //if (arg.ptr) free(cast(void*)arg.ptr);
 
     auto len = buffer.length;
     auto s = cast(uchar *)malloc(len);

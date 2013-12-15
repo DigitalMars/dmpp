@@ -110,7 +110,7 @@ struct SrcFile
 
 SrcFile* fileSearch(string filename, const string[] paths, int starti, out int foundi)
 {
-    foundi = paths.length;
+    foundi = cast(int)paths.length;
 
     filename = strip(filename);
     SrcFile* sf;
@@ -128,7 +128,7 @@ SrcFile* fileSearch(string filename, const string[] paths, int starti, out int f
             auto name = buildPath(path, filename);
             sf = SrcFile.lookup(name);
             if (sf.read())
-            {   foundi = key;
+            {   foundi = cast(int)key;
                 goto L1;
             }
         }

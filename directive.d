@@ -486,7 +486,7 @@ bool parseDirective(R)(ref R r)
                     if (cond && sf && !seenTokens && sf.includeGuard == null)
                     {
                         sf.includeGuard = r.idbuf[].dup;
-                        sf.ifstacki = r.src.ifstack.length();
+                        sf.ifstacki = cast(int)r.src.ifstack.length();
                         cnd = CONDguard;
                     }
 
