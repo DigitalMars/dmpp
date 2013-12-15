@@ -124,20 +124,20 @@ struct Id
         defineMacro(cast(ustring)"__LINE__", null, null, IDpredefined | IDlinnum);
         defineMacro(cast(ustring)"__COUNTER__", null, null, IDpredefined | IDcounter);
 
-        char[1+26+1] date;
+        uchar[1+26+1] date;
         time_t t;
 
         time(&t);
-        auto p = ctime(&t);
+        auto p = cast(ubyte*)ctime(&t);
         assert(p);
 
-        auto len = sprintf(date.ptr,"\"%.24s\"",p);
+        auto len = sprintf(cast(char*)date.ptr,"\"%.24s\"",p);
         defineMacro(cast(ustring)"__TIMESTAMP__", null, date[0..len].idup, IDpredefined);
 
-        len = sprintf(date.ptr,"\"%.6s %.4s\"",p+4,p+20);
+        len = sprintf(cast(char*)date.ptr,"\"%.6s %.4s\"",p+4,p+20);
         defineMacro(cast(ustring)"__DATE__", null, date[0..len].idup, IDpredefined);
 
-        len = sprintf(date.ptr,"\"%.8s\"",p+11);
+        len = sprintf(cast(char*)date.ptr,"\"%.8s\"",p+11);
         defineMacro(cast(ustring)"__TIME__", null, date[0..len].idup, IDpredefined);
     }
 }

@@ -15,7 +15,8 @@ import context;
 import loc;
 import sources;
 
-alias char uchar;
+// Data type for C source code characters
+alias ubyte uchar;
 alias immutable(uchar)[] ustring;
 
 alias typeof(File.lockingTextWriter()) R;

@@ -65,7 +65,7 @@ ustring macroReplacementList(R)(bool objectLike, ustring[] parameters, ref R tex
     alias Unqual!(ElementEncodingType!R) E;
 
     if (text.empty)
-        return "";
+        return cast(ustring)"";
 
     E[1000] tmpbuf = void;
     auto outbuf = Textbuf!uchar(tmpbuf);
@@ -218,16 +218,16 @@ unittest
     assert(s == "a" ~ ESC.start ~ ESC.concat ~ "z");
 
     r = cast(ustring)"x#/**/abc y\n";
-    s = macroReplacementList(false, ["abc"], r);
+    s = macroReplacementList(false, cast(ustring[])(["abc"]), r);
 //writefln("'%s', %s", s, s.length);
     assert(s == "x" ~ ESC.start ~ ESC.stringize ~ ESC.arg1 ~ " y");
 
     r = cast(ustring)"x  abc/**/y\n";
-    s = macroReplacementList(false, ["abc"], r);
+    s = macroReplacementList(false, cast(ustring[])(["abc"]), r);
     assert(s == "x " ~ ESC.start ~ ESC.arg1 ~ " y");
 
     r = cast(ustring)"x \"abc\" R\"a(abc)a\" 'a' \ry\n";
-    s = macroReplacementList(false, ["abc","a"], r);
+    s = macroReplacementList(false, cast(ustring[])(["abc","a"]), r);
     assert(s == "x \"abc\" R\"a(abc)a\" 'a' y");
 }
 
@@ -301,8 +301,8 @@ unittest
     auto s = trimWhiteSpace(a);
     assert(s == "");
 
-    uchar[1] b = " ";
-    s = trimWhiteSpace(b);
+    char[1] b = " ";
+    s = trimWhiteSpace(cast(ubyte[])b);
     assert(s == "");
 
     ubyte[6] c = cast(ubyte[])("" ~ ESC.brk ~ " a " ~ ESC.brk ~ " ");
@@ -475,23 +475,23 @@ uchar[] stringize(const(uchar)[] text)
 
 unittest
 {
-    auto s = stringize("  ");
+    auto s = stringize(cast(ustring)"  ");
     assert(s == `""`);
     if (s.ptr) free(s.ptr);
 
-    s = stringize(" " ~ ESC.space ~ "" ~ ESC.brk ~ "a" ~ ESC.expand ~ "" ~ ESC.brk ~ "bc" ~ ESC.space ~ "" ~ ESC.brk ~ " ");
+    s = stringize(cast(ustring)(" " ~ ESC.space ~ "" ~ ESC.brk ~ "a" ~ ESC.expand ~ "" ~ ESC.brk ~ "bc" ~ ESC.space ~ "" ~ ESC.brk ~ " "));
     assert(s == `"abc"`);
     free(s.ptr);
 
-    s = stringize(`ab?\\x'y'"z"`);
+    s = stringize(cast(ustring)(`ab?\\x'y'"z"`));
     assert(s == `"ab\?\\x'y'\"z\""`);
     free(s.ptr);
 
-    s = stringize(`'\'a\\'b\`);
+    s = stringize(cast(ustring)(`'\'a\\'b\`));
     assert(s == `"'\\'a\\\\'b\"`);
     free(s.ptr);
 
-    s = stringize(`"R"x(aa)x""`);
+    s = stringize(cast(ustring)(`"R"x(aa)x""`));
     assert(s == `"\"R\"x(aa)x\"\""`);
     free(s.ptr);
 
@@ -1093,13 +1093,13 @@ unittest
 
     ustring s;
     ustring[] args;
-    s = "ab,cd )a";
+    s = cast(ustring)"ab,cd )a";
     auto r = s.macroScanArguments(2, false, args, empty);
 //writefln("'%s', %s", args, args.length);
     assert(!r.empty && r.front == 'a');
     assert(args == ["ab","cd"]);
 
-    s = "ab )a";
+    s = cast(ustring)"ab )a";
     r = s.macroScanArguments(2, true, args, empty);
 //writefln("'%s', %s", args, args.length);
     assert(!r.empty && r.front == 'a');
@@ -1243,39 +1243,39 @@ unittest
     EmptyInputRange!uchar uempty;
     EmptyInputRange!char  empty;
 
-    ustring s = " \t\r\n\v\f /**/ //
+    ustring s = cast(ustring)" \t\r\n\v\f /**/ //
  )a";
     ustring arg;
     auto r = s.macroScanArgument(false, arg, uempty);
     assert(!r.empty && r.front == ')');
     assert(arg == "");
 
-    s = " ((,)) )a";
+    s = cast(ustring)" ((,)) )a";
     r = s.macroScanArgument(false, arg, empty);
     assert(!r.empty && r.front == ')');
     assert(arg == " ((,))");
 
-    s = "ab,cd )a";
+    s = cast(ustring)"ab,cd )a";
     r = s.macroScanArgument(false, arg, empty);
     assert(!r.empty && r.front == ',');
     assert(arg == "ab");
 
-    s = "ab,cd )a";
+    s = cast(ustring)"ab,cd )a";
     r = s.macroScanArgument(true, arg, empty);
     assert(!r.empty && r.front == ')');
     assert(arg == "ab,cd");
 
-    s = "a'b',cd )a";
+    s = cast(ustring)"a'b',cd )a";
     r = s.macroScanArgument(false, arg, empty);
     assert(!r.empty && r.front == ',');
     assert(arg == "a'b'");
 
-    s = `a"b",cd )a`;
+    s = cast(ustring)`a"b",cd )a`;
     r = s.macroScanArgument(false, arg, empty);
     assert(!r.empty && r.front == ',');
     assert(arg == `a"b"`);
 
-    s = `aR"x(b")x",cd )a`;
+    s = cast(ustring)`aR"x(b")x",cd )a`;
     r = s.macroScanArgument(false, arg, empty);
 //writefln("|%s|, %s", arg, arg.length);
     assert(!r.empty && r.front == ',');
@@ -1406,31 +1406,31 @@ unittest
     assert(buf[] == "a b\x07\n");
 
     buf.init();
-    s = cast(ustring)"" ~ ESC.brk ~ "";
+    s = cast(ustring)("" ~ ESC.brk ~ "");
     buf.writePreprocessedLine(s);
 //writefln("|%s| %s", buf[], buf[].length);
     assert(buf[] == "\n");
 
     buf.init();
-    s = cast(ustring)"" ~ ESC.brk ~ ESC.brk ~ ESC.brk ~ "";
+    s = cast(ustring)("" ~ ESC.brk ~ ESC.brk ~ ESC.brk ~ "");
     buf.writePreprocessedLine(s);
 //writefln("|%s| %s", buf[], buf[].length);
     assert(buf[] == "\n");
 
     buf.init();
-    s = cast(ustring)"a" ~ ESC.brk ~ ESC.brk ~ ESC.brk ~ "";
+    s = cast(ustring)("a" ~ ESC.brk ~ ESC.brk ~ ESC.brk ~ "");
     buf.writePreprocessedLine(s);
 //writefln("|%s| %s", buf[], buf[].length);
     assert(buf[] == "a\n");
 
     buf.init();
-    s = cast(ustring)"a" ~ ESC.brk ~ ESC.brk ~ "b" ~ ESC.brk ~ "+";
+    s = cast(ustring)("a" ~ ESC.brk ~ ESC.brk ~ "b" ~ ESC.brk ~ "+");
     buf.writePreprocessedLine(s);
 //writefln("|%s| %s", buf[], buf[].length);
     assert(buf[] == "a b+\n");
 
     buf.init();
-    s = cast(ustring)"+" ~ ESC.brk ~ "+" ~ ESC.brk ~ "(";
+    s = cast(ustring)("+" ~ ESC.brk ~ "+" ~ ESC.brk ~ "(");
     buf.writePreprocessedLine(s);
 //writefln("|%s| %s", buf[], buf[].length);
     assert(buf[] == "+ +(\n");

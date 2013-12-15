@@ -124,7 +124,7 @@ struct Context(R)
         Id.defineMacro(cast(ustring)"__BASE_FILE__", null, cast(ustring)sf.filename, Id.IDpredefined);
         Id.initPredefined();
         foreach (def; params.defines)
-            macrosDefine(def);
+            macrosDefine(cast(ustring)def);
 
         // Set up preprocessed output
         expanded.start(outrange);
@@ -451,7 +451,7 @@ struct Source
     // These are if isFile is true
     Loc loc;            // current location
     ustring input;      // remaining file contents
-    string includeGuard;
+    ustring includeGuard;
     int pathIndex;      // index into paths[] of where this file came from (-1 if not)
     int ifstacki;       // index into ifstack[]
 

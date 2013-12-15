@@ -260,7 +260,7 @@ bool parseDirective(R)(ref R r)
         case TOK.identifier:
         {
             auto id = r.idbuf[];
-            switch (id)
+            switch (cast(string)id)
             {
                 case "line":
                     // #line directive
@@ -618,7 +618,7 @@ bool parseDirective(R)(ref R r)
                         err_fatal(r.loc(), "end of line expected following #include");
                     r.src.unget();
                     r.src.push('\n');
-                    r.src.includeFile(includeNext, sysstring, s.idup);
+                    r.src.includeFile(includeNext, sysstring, cast(string)s.idup);
                     r.src.popFront();
                     r.src.expanded.on();
                     r.popFront();
@@ -719,7 +719,7 @@ void skipFalseCond(R)(ref R r)
             if (r.front == TOK.identifier)
             {
                 auto id = r.idbuf[];
-                switch (id)
+                switch (cast(string)id)
                 {
                     case "if":
                     case "ifdef":
