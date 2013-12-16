@@ -719,7 +719,7 @@ void macroExpandedText(Context, R)(Id* m, ustring[] args, ref R buffer)
 
 //debug=MacroExpand;
 
-uchar[] macroExpand(Context)(const(uchar)[] text)
+private uchar[] macroExpand(Context)(const(uchar)[] text)
 {
     debug (MacroExpand)
         writefln("+macroExpand(text = '%s')", cast(string)text);
@@ -953,11 +953,11 @@ uchar[] macroExpand(Context)(const(uchar)[] text)
                         uchar[128] tmpbuf2 = void;
                         auto expbuffer = Textbuf!uchar(tmpbuf2);
 
-                        macroExpandedText!Context(m, args, expbuffer);
-                        auto p = expbuffer[];
-                        auto q = macroRescan!Context(m, p);
+                        uchar[128] tmpbuf3 = void;
+                        auto rescanbuffer = Textbuf!uchar(tmpbuf3);
 
-                        expbuffer.free();
+                        macroExpandedText!Context(m, args, expbuffer);
+                        macroRescan!Context(m, expbuffer[], rescanbuffer);
 
                         /*
                          * Insert break if necessary to prevent
@@ -968,10 +968,13 @@ uchar[] macroExpand(Context)(const(uchar)[] text)
                             r.push(ESC.brk);
                         }
 
-                        r.push(q);
+                        r.push(rescanbuffer[].dup);
                         r.setExpanded();
                         r.push(ESC.brk);
                         r.popFront();
+
+                        rescanbuffer.free();
+                        expbuffer.free();
                     }
                     continue;
                 }
@@ -999,9 +1002,11 @@ Ldone:
 
 /***********************************************
  * Rescan already expanded macro text for more substitutions.
+ * Output:
+ *      result written to outbuf
  */
 
-uchar[] macroRescan(Context)(Id* m, const(uchar)[] text)
+void macroRescan(Context, R)(Id* m, const(uchar)[] text, ref R outbuf)
 {
     m.flags |= Id.IDinuse;
     auto r = macroExpand!Context(text);
@@ -1009,13 +1014,9 @@ uchar[] macroRescan(Context)(Id* m, const(uchar)[] text)
     m.flags &= ~Id.IDinuse;
 
     if (r.empty)
-    {
-        uchar*p = cast(uchar*)malloc(1);
-        assert(p);
-        p[0] = ESC.space;
-        r = p[0 .. 1];
-    }
-    return r;
+        outbuf.put(ESC.space);
+    else
+        outbuf.put(r);
 }
 
 

@@ -624,13 +624,13 @@ struct Lexer(R) if (isInputRange!R)
                             uchar[128] tmpbuf = void;
                             auto expbuffer = Textbuf!uchar(tmpbuf);
 
-                            macroExpandedText!(typeof(*src))(m, args, expbuffer);
-                            auto p = expbuffer[];
-                            //writefln("expanded: '%s'", p);
-                            auto q = macroRescan!(typeof(*src))(m, p);
-                            //writefln("rescanned: '%s'", q);
+                            uchar[128] tmpbuf3 = void;
+                            auto rescanbuffer = Textbuf!uchar(tmpbuf3);
 
-                            expbuffer.free();
+                            macroExpandedText!(typeof(*src))(m, args, expbuffer);
+                            //writefln("expanded: '%s'", expbuffer[]);
+                            macroRescan!(typeof(*src))(m, expbuffer[], rescanbuffer);
+                            //writefln("rescanned: '%s'", rescanbuffer[]);
 
                             /*
                              * Insert break if necessary to prevent
@@ -641,11 +641,14 @@ struct Lexer(R) if (isInputRange!R)
                                 src.push(ESC.brk);
                             }
 
-                            src.push(q);
+                            src.push(rescanbuffer[].dup);
                             src.setExpanded();
                             src.expanded.on();
                             src.expanded.put(ESC.brk);
                             src.popFront();
+
+                            rescanbuffer.free();
+                            expbuffer.free();
                             continue;
                         }
 
