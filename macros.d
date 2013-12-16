@@ -682,12 +682,19 @@ void macroExpandedText(Context, R)(Id* m, ustring[] args, ref R buffer)
             if (expand)
             {
                 //writefln("\t\tbefore '%s'", a);
-                auto s = macroExpand!Context(a);
+
+                uchar[128] tmpbuf = void;
+                auto expbuf = Textbuf!uchar(tmpbuf);
+
+                macroExpand!Context(a, expbuf);
+                auto s = expbuf[];
+
                 //writefln("\t\tafter  '%s'", s);
                 auto t = trimEscWhiteSpace(s);
                 //writefln("\t\ttrim   '%s'", t);
                 buffer.put(t);
-                //if (s.ptr) free(cast(void*)s.ptr);
+
+                expbuf.free();
             }
             else
             {
@@ -714,20 +721,17 @@ void macroExpandedText(Context, R)(Id* m, ustring[] args, ref R buffer)
 
 
 /*****************************************
- * Take string text, fully macro expand it, and return the result.
+ * Take string text, fully macro expand it, and write the result to outbuf.
  */
 
 //debug=MacroExpand;
 
-private uchar[] macroExpand(Context)(const(uchar)[] text)
+private void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
 {
     debug (MacroExpand)
         writefln("+macroExpand(text = '%s')", cast(string)text);
 
     alias uchar E;
-
-    uchar[128] tmpbuf = void;
-    auto outbuf = Textbuf!uchar(tmpbuf);
 
     auto ctx = Context.getContext();
     ctx.expanded.off();
@@ -996,7 +1000,6 @@ Ldone:
 
     debug (MacroExpand)
         writefln("-macroExpand() = '%s'", outbuf[0 .. outbuf.length]);
-    return outbuf[0 .. outbuf.length].dup;
 }
 
 
@@ -1009,14 +1012,22 @@ Ldone:
 void macroRescan(Context, R)(Id* m, const(uchar)[] text, ref R outbuf)
 {
     m.flags |= Id.IDinuse;
-    auto r = macroExpand!Context(text);
+
+    uchar[128] tmpbuf = void;
+    auto expbuf = Textbuf!uchar(tmpbuf);
+
+    macroExpand!Context(text, expbuf);
+    auto r = expbuf[];
     r = r.trimWhiteSpace();
+
     m.flags &= ~Id.IDinuse;
 
     if (r.empty)
         outbuf.put(ESC.space);
     else
         outbuf.put(r);
+
+    expbuf.free();
 }
 
 
