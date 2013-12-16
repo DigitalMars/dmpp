@@ -424,18 +424,19 @@ private void stringize(R)(ref R outbuf, const(uchar)[] text)
     }
     EscString es;
 
-    while (text.length)
+    while (!text.empty)
     {
-        auto c = text[0];
-        text = text[1 .. $];
+        auto c = cast(uchar)text.front;
+        text.popFront();
         switch (c)
         {
             case 'R':
-                if (text.length && text[0] == '"')
+                if (!text.empty && text.front == '"')
                 {
                     outbuf.put('R');
                     es.put('"');
-                    text = text[1 .. $].skipRawStringLiteral(es);
+                    text.popFront();
+                    text = text.skipRawStringLiteral(es);
                 }
                 else
                     goto default;
@@ -468,7 +469,7 @@ private void stringize(R)(ref R outbuf, const(uchar)[] text)
 
 unittest
 {
-    uchar[1000] tmpbuf = void;
+    uchar[10] tmpbuf = void;
     auto outbuf = Textbuf!uchar(tmpbuf);
 
     outbuf.initialize();
