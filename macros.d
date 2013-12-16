@@ -1069,8 +1069,8 @@ R macroScanArguments(R, S, T)(R r, size_t nparameters, bool variadic, out ustrin
 
         if (nparameters || argsbuffer.length > len + 1)
         {
-            argsindexbuffer.put(len + 1);
-            argsindexbuffer.put(argsbuffer.length);
+            argsindexbuffer.put(cast(uint)(len + 1));
+            argsindexbuffer.put(cast(uint)(argsbuffer.length));
         }
 
         va_args = variadic && (argsindexbuffer.length/2 + 1 == nparameters);
