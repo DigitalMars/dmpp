@@ -157,7 +157,7 @@ void macrosDefine(ustring def)
                 goto Lerror;
         }
         text ~= '\n';
-        text = macroReplacementList(objectLike, parameters, text);
+        text = text.macroReplacementList(objectLike, parameters);
     }
 
     uint flags = Id.IDpredefined;
@@ -352,7 +352,7 @@ bool parseDirective(R)(ref R r)
                         r.lexMacroParameters(variadic, parameters);
                     }
 
-                    auto text = macroReplacementList(objectLike, parameters, r.src);
+                    auto text = r.src.macroReplacementList(objectLike, parameters);
 
                     uint flags = 0;
                     if (variadic)

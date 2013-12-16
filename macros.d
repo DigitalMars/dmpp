@@ -49,7 +49,7 @@ enum ESC : ubyte
 }
 
 /************************************
- * Transform the macro definition into a replacement list.
+ * Transform the macro definition 'text' into a replacement list.
  * Embed escape sequence commands for argument substitution, argument stringizing,
  * and token concatenation.
  * Input:
@@ -60,7 +60,7 @@ enum ESC : ubyte
  *      replacement list with embedded commands for inserting arguments and stringizing
  */
 
-ustring macroReplacementList(R)(bool objectLike, ustring[] parameters, ref R text)
+ustring macroReplacementList(R)(ref R text, bool objectLike, ustring[] parameters)
 {
     alias Unqual!(ElementEncodingType!R) E;
 
@@ -202,32 +202,32 @@ unittest
 {
     ustring s;
     auto r = cast(ustring)"\n";
-    s = macroReplacementList(true, null, r);
+    s = r.macroReplacementList(true, null);
     assert(s == "");
 
     r = cast(ustring)" \t/*hello*/ //\n";
-    s = macroReplacementList(true, null, r);
+    s = r.macroReplacementList(true, null);
     assert(s == "");
 
     r = cast(ustring)"# \n";
-    s = macroReplacementList(true, null, r);
+    s = r.macroReplacementList(true, null);
     assert(s == "#");
 
     r = cast(ustring)"a ## /**/z\n";
-    s = macroReplacementList(true, null, r);
+    s = r.macroReplacementList(true, null);
     assert(s == "a" ~ ESC.start ~ ESC.concat ~ "z");
 
     r = cast(ustring)"x#/**/abc y\n";
-    s = macroReplacementList(false, cast(ustring[])(["abc"]), r);
+    s = r.macroReplacementList(false, cast(ustring[])(["abc"]));
 //writefln("'%s', %s", s, s.length);
     assert(s == "x" ~ ESC.start ~ ESC.stringize ~ ESC.arg1 ~ " y");
 
     r = cast(ustring)"x  abc/**/y\n";
-    s = macroReplacementList(false, cast(ustring[])(["abc"]), r);
+    s = r.macroReplacementList(false, cast(ustring[])(["abc"]));
     assert(s == "x " ~ ESC.start ~ ESC.arg1 ~ " y");
 
     r = cast(ustring)"x \"abc\" R\"a(abc)a\" 'a' \ry\n";
-    s = macroReplacementList(false, cast(ustring[])(["abc","a"]), r);
+    s = r.macroReplacementList(false, cast(ustring[])(["abc","a"]));
     assert(s == "x \"abc\" R\"a(abc)a\" 'a' y");
 }
 
@@ -238,7 +238,7 @@ unittest
  *      modified input
  */
 
-uchar[] trimWhiteSpace(uchar[] text)
+private uchar[] trimWhiteSpace(uchar[] text)
 {
     // Remove leading
     size_t fronti;
@@ -330,7 +330,7 @@ unittest
  * All done in-place.
  */
 
-uchar[] trimEscWhiteSpace(uchar[] text)
+private uchar[] trimEscWhiteSpace(uchar[] text)
 {
     auto p = text.ptr;
     bool leading = true;
@@ -519,14 +519,12 @@ ustring getIthArg(ustring[] args, size_t argi)
 }
 
 /*******************************************
- * Build macro expanded text.
- * Returns:
- *      malloc'd ustring
+ * Build macro expanded text, writing it to buffer.
  */
 
 //debug=macroExpandedText;
 
-uchar[] macroExpandedText(Context)(Id* m, ustring[] args)
+void macroExpandedText(Context, R)(Id* m, ustring[] args, ref R buffer)
 {
     debug (macroExpandedText)
     {
@@ -538,9 +536,6 @@ uchar[] macroExpandedText(Context)(Id* m, ustring[] args)
             writefln("\t[%d] = '%s'", i, a);
         }
     }
-
-    uchar[128] tmpbuf = void;
-    auto buffer = Textbuf!uchar(tmpbuf);
 
     /* Determine if we should elide commas ( ,##__VA_ARGS__ extension)
      */
@@ -715,14 +710,6 @@ uchar[] macroExpandedText(Context)(Id* m, ustring[] args)
 
     //foreach (arg; args)
         //if (arg.ptr) free(cast(void*)arg.ptr);
-
-    auto len = buffer.length;
-    auto s = cast(uchar *)malloc(len);
-    assert(s);
-    memcpy(s, buffer[0 .. len].ptr, len);
-    debug (macroExpandedText)
-        writefln("\tmacroExpandedText = '%s'", s[0 .. len]);
-    return s[0 .. len];
 }
 
 
@@ -963,9 +950,14 @@ uchar[] macroExpand(Context)(const(uchar)[] text)
                         if (!r.empty)
                             r.unget();
 
-                        auto p = macroExpandedText!Context(m, args);
+                        uchar[128] tmpbuf2 = void;
+                        auto expbuffer = Textbuf!uchar(tmpbuf2);
+
+                        macroExpandedText!Context(m, args, expbuffer);
+                        auto p = expbuffer[];
                         auto q = macroRescan!Context(m, p);
-                        //if (p.ptr) free(p.ptr);
+
+                        expbuffer.free();
 
                         /*
                          * Insert break if necessary to prevent

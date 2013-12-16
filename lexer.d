@@ -621,11 +621,16 @@ struct Lexer(R) if (isInputRange!R)
                             if (!src.empty)
                                 src.unget();
 
-                            auto p = macroExpandedText!(typeof(*src))(m, args);
+                            uchar[128] tmpbuf = void;
+                            auto expbuffer = Textbuf!uchar(tmpbuf);
+
+                            macroExpandedText!(typeof(*src))(m, args, expbuffer);
+                            auto p = expbuffer[];
                             //writefln("expanded: '%s'", p);
                             auto q = macroRescan!(typeof(*src))(m, p);
                             //writefln("rescanned: '%s'", q);
-                            //if (p.ptr) free(p.ptr);
+
+                            expbuffer.free();
 
                             /*
                              * Insert break if necessary to prevent
