@@ -880,7 +880,13 @@ private void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
                             continue;
                         }
 
-                        ustring[] args;
+                        /* A temporary buffer to contain the argument strings
+                         */
+                        uchar[64] tmpargsbuf = void;
+                        auto argsbuffer = Textbuf!uchar(tmpargsbuf);
+
+                        ustring[] args; // will point into argsbuffer[]
+
                         if (m.flags & Id.IDfunctionLike)
                         {
                             /* Scan up to opening '(' of actual argument list
@@ -945,7 +951,7 @@ private void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
 
                             r = r.macroScanArguments(m.parameters.length,
                                     !!(m.flags & Id.IDdotdotdot),
-                                     args, ctx);
+                                     args, ctx, argsbuffer);
                         }
 
                         outbuf.setLength(len);
@@ -979,6 +985,7 @@ private void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
 
                         rescanbuffer.free();
                         expbuffer.free();
+                        argsbuffer.free();
                     }
                     continue;
                 }
@@ -1038,35 +1045,43 @@ void macroRescan(Context, R)(Id* m, const(uchar)[] text, ref R outbuf)
  *      nparameters     number of parameters expected
  *      variadic        last parameter is variadic
  * Output:
- *      args    array of actual arguments
+ *      args            array of actual arguments
+ *      argsbuffer      args points into this
  * Returns:
  *      r past closing )
  */
 
-R macroScanArguments(R, S)(R r, size_t nparameters, bool variadic, out ustring[] args, ref S s)
+R macroScanArguments(R, S, T)(R r, size_t nparameters, bool variadic, out ustring[] args, ref S s,
+        ref T argsbuffer)
 {
-    bool va_args = variadic && (args.length + 1 == nparameters);
+    /* Temporary buffer to store indices into argsbuffer[] rather than pointers,
+     * since argsbuffer[] may get reallocated
+     */
+    uint[16] tmpargs = void;
+    auto argsindexbuffer = Textbuf!uint(tmpargs);
 
-    uchar[100] tmpbuf = void;
-    auto argbuf = Textbuf!uchar(tmpbuf);
+    bool va_args = variadic && (1 == nparameters);
 
     while (1)
     {
-        argbuf.initialize();
-        r = r.macroScanArgument(s, va_args, argbuf);
+        auto len = argsbuffer.length;   // we'll be appending after len
+        r = r.macroScanArgument(s, va_args, argsbuffer);
 
-        if (nparameters || argbuf.length > 1)
-            if (argbuf.length == 1)
-                args ~= cast(ustring)"";        // no, don't append null because of getIthArg()
-            else
-                args ~= argbuf[1 .. argbuf.length].idup;
+        if (nparameters || argsbuffer.length > len + 1)
+        {
+            argsindexbuffer.put(len + 1);
+            argsindexbuffer.put(argsbuffer.length);
+        }
 
-        va_args = variadic && (args.length + 1 == nparameters);
+        va_args = variadic && (argsindexbuffer.length/2 + 1 == nparameters);
 
         if (r.empty)
         {
             if (va_args)
-                args ~= null;
+            {
+                argsindexbuffer.put(0);
+                argsindexbuffer.put(0);
+            }
             goto Lret;
         }
 
@@ -1080,14 +1095,17 @@ R macroScanArguments(R, S)(R r, size_t nparameters, bool variadic, out ustring[]
             assert(c == ')');           // end of argument list
 
             if (va_args)
-                args ~= null;
+            {
+                argsindexbuffer.put(0);
+                argsindexbuffer.put(0);
+            }
 
-            if (args.length != nparameters)
+            if ((argsindexbuffer.length/2) != nparameters)
             {
                 static if (__traits(compiles, r.loc()))
-                    err_fatal(r.loc(), "expected %d macro arguments, had %d", nparameters, args.length);
+                    err_fatal(r.loc(), "expected %d macro arguments, had %d", nparameters, argsindexbuffer.length/2);
                 else
-                    err_fatal("expected %d macro arguments, had %d", nparameters, args.length);
+                    err_fatal("expected %d macro arguments, had %d", nparameters, argsindexbuffer.length/2);
             }
             r.popFront();
             goto Lret;
@@ -1096,7 +1114,22 @@ R macroScanArguments(R, S)(R r, size_t nparameters, bool variadic, out ustring[]
     err_fatal("argument list doesn't end with ')'");
 
 Lret:
-    argbuf.free();
+    // Build args[], as argsbuffer[] is no longer going to be reallocated
+    size_t nargs = argsindexbuffer.length / 2;
+    args.length = nargs;
+    foreach (i; 0 .. nargs)
+    {
+        if (argsindexbuffer[i * 2] == 0)
+            args[i] = null;
+        else
+        {
+            args[i] = cast(ustring)argsbuffer[argsindexbuffer[i * 2] .. argsindexbuffer[i * 2 + 1]];
+        }
+    }
+
+    //writeln("args[]"); foreach (i,v; args) writefln("\t[%d] = '%s'", i, cast(string)v);
+
+    argsindexbuffer.free();
     return r;
 }
 
@@ -1107,16 +1140,24 @@ unittest
     ustring s;
     ustring[] args;
     s = cast(ustring)"ab,cd )a";
-    auto r = s.macroScanArguments(2, false, args, empty);
+
+    uchar[64] tmpargsbuf = void;
+    auto argsbuffer = Textbuf!uchar(tmpargsbuf);
+
+    argsbuffer.initialize();
+    auto r = s.macroScanArguments(2, false, args, empty, argsbuffer);
 //writefln("'%s', %s", args, args.length);
     assert(!r.empty && r.front == 'a');
     assert(args == ["ab","cd"]);
 
     s = cast(ustring)"ab )a";
-    r = s.macroScanArguments(2, true, args, empty);
+    argsbuffer.initialize();
+    r = s.macroScanArguments(2, true, args, empty, argsbuffer);
 //writefln("'%s', %s", args, args.length);
     assert(!r.empty && r.front == 'a');
     assert(args == ["ab",""]);
+
+    argsbuffer.free();
 }
 
 /*****************************************

@@ -33,9 +33,12 @@ struct Textbuf(T)
         buf[i++] = c;
     }
 
-    void put(dchar c)
+    static if (T.sizeof == 1)
     {
-        put(cast(T)c);
+        void put(dchar c)
+        {
+            put(cast(T)c);
+        }
     }
 
     void put(const(T)[] s)
@@ -109,14 +112,14 @@ struct Textbuf(T)
         {
             /* Prefer realloc when possible
              */
-            p = realloc(buf.ptr, newsize);
+            p = realloc(buf.ptr, newsize * T.sizeof);
             assert(p);
         }
         else
         {
-            p = malloc(newsize);
+            p = malloc(newsize * T.sizeof);
             assert(p);
-            memcpy(p, buf.ptr, i);
+            memcpy(p, buf.ptr, i * T.sizeof);
             resized = true;
         }
         buf = (cast(T*)p)[0 .. newsize];

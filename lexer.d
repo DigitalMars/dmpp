@@ -536,7 +536,14 @@ struct Lexer(R) if (isInputRange!R)
                                 src.popFront();
                                 continue;
                             }
-                            ustring[] args;
+
+                            /* A temporary buffer to contain the argument strings
+                             */
+                            uchar[64] tmpargsbuf = void;
+                            auto argsbuffer = Textbuf!uchar(tmpargsbuf);
+
+                            ustring[] args;     // will point into argsbuffer[]
+
                             if (m.flags & Id.IDfunctionLike)
                             {
                                 /* Scan up to opening '(' of actual argument list
@@ -614,7 +621,7 @@ struct Lexer(R) if (isInputRange!R)
 
                                 src = src.macroScanArguments(m.parameters.length,
                                         !!(m.flags & Id.IDdotdotdot),
-                                         args, emptyrange);
+                                         args, emptyrange, argsbuffer);
                             }
                             auto xcnext = src.front;
 
@@ -649,6 +656,7 @@ struct Lexer(R) if (isInputRange!R)
 
                             rescanbuffer.free();
                             expbuffer.free();
+                            argsbuffer.free();
                             continue;
                         }
 
