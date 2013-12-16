@@ -374,11 +374,11 @@ unittest
 
 /*************************************
  * Stringize the argument of the # operator per C99 6.10.3.2.2
- * Returns:
- *      a malloc'd ustring
+ * Output:
+ *      writes to OutputRange r
  */
 
-uchar[] stringize(const(uchar)[] text)
+private void stringize(R)(ref R outbuf, const(uchar)[] text)
 {
     // Remove leading spaces
     size_t i;
@@ -399,8 +399,6 @@ uchar[] stringize(const(uchar)[] text)
     }
     text = text[0 .. i];
 
-    uchar[1000] tmpbuf = void;
-    auto outbuf = Textbuf!uchar(tmpbuf);
     outbuf.put('"');
 
     // Adapter OutputRange to escape certain characters
@@ -466,40 +464,40 @@ uchar[] stringize(const(uchar)[] text)
     }
 
     outbuf.put('"');
-    auto buf = outbuf[0 .. outbuf.length];
-    auto p = cast(uchar*)malloc(buf.length);
-    assert(p);
-    memcpy(p, buf.ptr, buf.length);
-    return p[0 .. buf.length];
 }
 
 unittest
 {
-    auto s = stringize(cast(ustring)"  ");
-    assert(s == `""`);
-    //if (s.ptr) free(s.ptr);
+    uchar[1000] tmpbuf = void;
+    auto outbuf = Textbuf!uchar(tmpbuf);
 
-    s = stringize(cast(ustring)(" " ~ ESC.space ~ "" ~ ESC.brk ~ "a" ~ ESC.expand ~ "" ~ ESC.brk ~ "bc" ~ ESC.space ~ "" ~ ESC.brk ~ " "));
-    assert(s == `"abc"`);
-    //free(s.ptr);
+    outbuf.initialize();
+    stringize(outbuf, cast(ustring)"  ");
+    assert(outbuf[] == `""`);
 
-    s = stringize(cast(ustring)(`ab?\\x'y'"z"`));
-    assert(s == `"ab\?\\x'y'\"z\""`);
-    //free(s.ptr);
+    outbuf.initialize();
+    stringize(outbuf, cast(ustring)(" " ~ ESC.space ~ "" ~ ESC.brk ~ "a" ~ ESC.expand ~ "" ~ ESC.brk ~ "bc" ~ ESC.space ~ "" ~ ESC.brk ~ " "));
+    assert(outbuf[] == `"abc"`);
 
-    s = stringize(cast(ustring)(`'\'a\\'b\`));
-    assert(s == `"'\\'a\\\\'b\"`);
-    //free(s.ptr);
+    outbuf.initialize();
+    stringize(outbuf, cast(ustring)(`ab?\\x'y'"z"`));
+    assert(outbuf[] == `"ab\?\\x'y'\"z\""`);
 
-    s = stringize(cast(ustring)(`"R"x(aa)x""`));
-    assert(s == `"\"R\"x(aa)x\"\""`);
-    //free(s.ptr);
+    outbuf.initialize();
+    stringize(outbuf, cast(ustring)(`'\'a\\'b\`));
+    assert(outbuf[] == `"'\\'a\\\\'b\"`);
 
+    outbuf.initialize();
+    stringize(outbuf, cast(ustring)(`"R"x(aa)x""`));
+    assert(outbuf[] == `"\"R\"x(aa)x\"\""`);
+
+    outbuf.initialize();
     ubyte[] u = cast(ubyte[])"R\"x(a?\\a)x\"";
-    s = stringize(cast(ustring)u);
+    stringize(outbuf, cast(ustring)u);
 //writefln("'%s', %s", s, s.length);
-    assert(s == `"R\"x(a\?\\a)x\""`);
-    //free(s.ptr);
+    assert(outbuf[] == `"R\"x(a\?\\a)x\""`);
+
+    outbuf.free();
 }
 
 
@@ -583,9 +581,7 @@ uchar[] macroExpandedText(Context)(Id* m, ustring[] args)
                 {
                     const argi2 = m.text[++q];
                     const arg = getIthArg(args, argi2);
-                    auto a = stringize(arg);
-                    buffer.put(a);
-                    //if (a.ptr) free(a.ptr);
+                    stringize(buffer, arg);
                     continue;
                 }
 
