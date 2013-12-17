@@ -864,6 +864,7 @@ void includeFile(R)(R ctx, bool includeNext, bool sysstring, const(char)[] s)
         }
     }
 
+    //writefln("found '%s', pathIndex = %s", sf.filename, pathIndex);
     ctx.pushFile(sf, sysstring, pathIndex);
 }
 

@@ -113,6 +113,8 @@ SrcFile* fileSearch(string filename, const string[] paths, int starti, out int f
         string currentPath)
 {
     //writefln("fileSearch(filename='%s', starti=%s, currentPath='%s')", filename, starti, currentPath);
+    //foreach (i,path; paths) writefln("  [%s] '%s'", i, path);
+
     foundi = cast(int)paths.length;
 
     filename = strip(filename);
@@ -135,13 +137,16 @@ SrcFile* fileSearch(string filename, const string[] paths, int starti, out int f
                 goto L1;
             }
         }
-        foreach (key, path; paths[starti .. $])
+        if (starti < paths.length)
         {
-            auto name = buildPath(path, filename);
-            sf = SrcFile.lookup(name);
-            if (sf.read())
-            {   foundi = cast(int)key;
-                goto L1;
+            foreach (key, path; paths[starti .. $])
+            {
+                auto name = buildPath(path, filename);
+                sf = SrcFile.lookup(name);
+                if (sf.read())
+                {   foundi = cast(int)(starti + key);
+                    goto L1;
+                }
             }
         }
         return null;
