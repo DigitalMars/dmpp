@@ -412,7 +412,7 @@ struct Context(R)
      * Output:
      *  pathIndex       index of where file was found
      */
-    SrcFile* searchForFile(bool includeNext, out bool isSystem, const(char)[] s, out int pathIndex)
+    SrcFile* searchForFile(bool includeNext, bool isSystem, const(char)[] s, out int pathIndex)
     {
         string currentPath;
 
