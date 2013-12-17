@@ -55,13 +55,12 @@ else
             if (context.doDeps)
                 context.deps ~= srcFilename;
 
-            File* fout = new File(outFilename, "wb");
+            auto fout = File(outFilename, "wb");        // has destructor
+            auto foutr = fout.lockingTextWriter();      // has destructor
 
-            context.localStart(sf, fout.lockingTextWriter());
+            context.localStart(sf, &foutr);
             context.preprocess();
             context.localFinish();
-
-            delete fout;
 
             /* The one source file we don't need to cache the contents
              * of is the .c file.

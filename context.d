@@ -123,7 +123,7 @@ struct Context(R)
     /**********
      * Create local context
      */
-    void localStart(SrcFile* sf, R outrange)
+    void localStart(SrcFile* sf, R* outrange)
     {
         // Define predefined macros
         Id.defineMacro(cast(ustring)"__BASE_FILE__", null, cast(ustring)sf.filename, Id.IDpredefined);
@@ -579,7 +579,7 @@ version (unittest)
         uchar[100] tmpbuf = void;
         auto outbuf = Textbuf!uchar(tmpbuf);
 
-        auto context = Context!(Textbuf!uchar*)(params);
+        auto context = Context!(Textbuf!uchar)(params);
 
         // Create a fake source file with contents
         auto sf = SrcFile.lookup("test.c");

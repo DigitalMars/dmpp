@@ -27,7 +27,7 @@ struct Expanded(R)
     uchar[1000] tmpbuf2 = void;
     Textbuf!uchar lineBuffer = void;
 
-    R foutr;
+    R* foutr;
 
     int noexpand = 0;
     int lineNumber = 1;                 // line number of expanded output
@@ -41,7 +41,7 @@ struct Expanded(R)
         lineBuffer = Textbuf!uchar(tmpbuf2);
     }
 
-    void start(R foutr)
+    void start(R* foutr)
     {
         this.foutr = foutr;
         this.lineBuffer.initialize();
