@@ -619,6 +619,7 @@ struct Lexer(R) if (isInputRange!R)
                                     break;
                                 }
 
+writefln("macroScanArguments('%s')", cast(string)m.name);
                                 src = src.macroScanArguments(m.parameters.length,
                                         !!(m.flags & Id.IDdotdotdot),
                                          args, emptyrange, argsbuffer);

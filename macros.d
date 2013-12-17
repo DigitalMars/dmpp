@@ -982,6 +982,7 @@ private void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
                                 break;
                             }
 
+writefln("macroScanArguments('%s')", cast(string)m.name);
                             r = r.macroScanArguments(m.parameters.length,
                                     !!(m.flags & Id.IDdotdotdot),
                                      args, ctx, argsbuffer);
