@@ -398,7 +398,7 @@ bool parseDirective(R)(ref R r)
 
                 case "error":
                     auto msg = r.src.restOfLine();
-                    err_fatal(r.loc(), "%s", msg);
+                    err_fatal(r.loc(), "%s", cast(string)msg);
                     return true;
 
                 case "if":
