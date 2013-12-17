@@ -788,8 +788,41 @@ private void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
             case 0:
                 goto Ldone;
 
-            case '0': .. case '9':
             case '.':
+                r.popFront();
+                outbuf.put(c);
+                if (!r.empty)
+                {
+                    c = r.front;
+                    switch (c)
+                    {
+                        case '0': .. case '9':
+                            r = r.skipFloat(outbuf, false, true, false);
+                            break;
+
+                        case '*':
+                            r.popFront();
+                            outbuf.put(c);
+                            break;
+
+                        case '.':
+                            r.popFront();
+                            outbuf.put(c);
+                            if (!r.empty && r.front == '.')
+                            {
+                                outbuf.put(c);
+                                r.popFront();
+                                continue;
+                            }
+                            break;
+
+                        default:
+                            break;
+                    }
+                }
+                continue;
+
+            case '0': .. case '9':
                 r = r.skipFloat(outbuf, false, false, false);
                 continue;
 
