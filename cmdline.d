@@ -77,7 +77,8 @@ Options:
         "output|o",     &p.outFilenames,
         "v",            &p.verbose);
 
-    // Fix up -Dname=value stuff
+    // Fix up -Dname=value stuff. This will be superseded by
+    // D-Programming-Language/phobos#1779, but won't hurt even then.
     for (size_t i = 1; i < args.length; )
     {
       if (!args[i].startsWith("-D"))
