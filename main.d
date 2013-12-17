@@ -6,6 +6,8 @@
  * Authors: Walter Bright
  */
 
+import std.array;
+import std.format;
 import std.stdio;
 import core.stdc.stdlib;
 import core.memory;
@@ -36,36 +38,43 @@ else
 
         auto context = Context!R(params);
 
-        // Preprocess each file
-        foreach (i; 0 .. params.sourceFilenames.length)
+        try
         {
-            if (i)
-                context.reset();
+            // Preprocess each file
+            foreach (i; 0 .. params.sourceFilenames.length)
+            {
+                if (i)
+                    context.reset();
 
-            auto srcFilename = params.sourceFilenames[i];
-            auto outFilename = params.outFilenames[i];
+                auto srcFilename = params.sourceFilenames[i];
+                auto outFilename = params.outFilenames[i];
 
-            if (context.params.verbose)
-                writefln("from %s to %s", srcFilename, outFilename);
+                if (context.params.verbose)
+                    writefln("from %s to %s", srcFilename, outFilename);
 
-            auto sf = SrcFile.lookup(srcFilename);
-            if (!sf.read())
-                err_fatal("cannot read file %s", srcFilename);
+                auto sf = SrcFile.lookup(srcFilename);
+                if (!sf.read())
+                    err_fatal("cannot read file %s", srcFilename);
 
-            if (context.doDeps)
-                context.deps ~= srcFilename;
+                if (context.doDeps)
+                    context.deps ~= srcFilename;
 
-            auto fout = File(outFilename, "wb");        // has destructor
-            auto foutr = fout.lockingTextWriter();      // has destructor
+                auto fout = File(outFilename, "wb");        // has destructor
+                auto foutr = fout.lockingTextWriter();      // has destructor
 
-            context.localStart(sf, &foutr);
-            context.preprocess();
-            context.localFinish();
+                context.localStart(sf, &foutr);
+                context.preprocess();
+                context.localFinish();
 
-            /* The one source file we don't need to cache the contents
-             * of is the .c file.
-             */
-            sf.freeContents();
+                /* The one source file we don't need to cache the contents
+                 * of is the .c file.
+                 */
+                sf.freeContents();
+            }
+        }
+        catch (Exception e)
+        {
+            err_fatal(context.loc(), e.msg);
         }
 
         context.globalFinish();
@@ -77,9 +86,9 @@ else
 
 void err_fatal(T...)(T args)
 {
-    stderr.write("Error: ");
-    stderr.writefln(args);
-    exit(EXIT_FAILURE);
+    auto app = appender!string();
+    app.formattedWrite(args);
+    throw new Exception(app.data);
 }
 
 void err_fatal(L:Loc, T...)(L loc, T args)
