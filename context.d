@@ -412,10 +412,14 @@ struct Context(R)
      * Output:
      *  pathIndex       index of where file was found
      */
-    SrcFile* searchForFile(bool includeNext, bool isSystem, const(char)[] s, out int pathIndex)
+    SrcFile* searchForFile(bool includeNext, bool curdir, bool isSystem, const(char)[] s, out int pathIndex)
     {
+        //writefln("searchForFile(includeNext = %s, curdir = %s, isSystem = %s, s = '%s')", includeNext, curdir, isSystem, s);
         string currentPath;
         auto csf = currentSourceFile();
+
+        if (curdir && csf)
+            currentPath = dirName(csf.loc.srcFile.filename);
 
         if (isSystem)
         {
@@ -426,13 +430,10 @@ struct Context(R)
         }
         else
         {
-            if (csf)
-            {
-                if (includeNext)
-                    pathIndex = csf.pathIndex + 1;
-                else
-                    currentPath = dirName(csf.loc.srcFile.filename);
-            }
+            if (csf && includeNext)
+                pathIndex = csf.pathIndex + 1;
+            else
+                pathIndex = 0;
         }
 
         auto sf = fileSearch(cast(string)s, paths, pathIndex, pathIndex, currentPath);

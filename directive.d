@@ -824,7 +824,7 @@ void skipFalseCond(R)(ref R r)
  * Process #include file
  * Input:
  *      includeNext     if it was #include_next
- *      system          if <file>
+ *      sysstring       if <file>
  *      s               the filename string
  */
 
@@ -832,12 +832,14 @@ void includeFile(R)(R ctx, bool includeNext, bool sysstring, const(char)[] s)
 {
     s = strip(s);       // remove leading and trailing whitespace
 
+    bool curdir = !sysstring && !includeNext;   // always look at current directory first
+
     auto csf = ctx.currentSourceFile();
     if (csf && csf.loc.isSystem)
         sysstring = true;
 
     int pathIndex;
-    auto sf = ctx.searchForFile(includeNext, sysstring, s, pathIndex);
+    auto sf = ctx.searchForFile(includeNext, curdir, sysstring, s, pathIndex);
     if (!sf)
     {
         err_fatal(ctx.loc(), "#include file '%s' not found", s);
