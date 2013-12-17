@@ -77,6 +77,19 @@ Options:
         "output|o",     &p.outFilenames,
         "v",            &p.verbose);
 
+    // Fix up -Dname=value stuff
+    for (size_t i = 1; i < args.length; )
+    {
+      if (!args[i].startsWith("-D"))
+      {
+        ++i;
+        continue;
+      }
+      p.defines ~= args[i][2 .. $];
+      args = args.remove(i);
+    }
+
+    assert(args.length >= 1);
     p.sourceFilenames = args[1 .. $];
 
     if (p.outFilenames.length == 0)
@@ -115,7 +128,6 @@ Options:
     {
         err_fatal("%s source files, but %s output files", p.sourceFilenames.length, p.outFilenames.length);
     }
-
     return p;
 }
 
@@ -178,5 +190,3 @@ unittest
     assert(sysIndex == 3);
     assert(paths == ["a","b","d","e","c","f"]);
 }
-
-
