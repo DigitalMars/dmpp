@@ -982,7 +982,7 @@ private void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
                                 break;
                             }
 
-writefln("macroScanArguments('%s')", cast(string)m.name);
+                            //writefln("macroScanArguments('%s')", cast(string)m.name);
                             r = r.macroScanArguments(m.parameters.length,
                                     !!(m.flags & Id.IDdotdotdot),
                                      args, ctx, argsbuffer);
@@ -1136,10 +1136,7 @@ R macroScanArguments(R, S, T)(R r, size_t nparameters, bool variadic, out ustrin
 
             if ((argsindexbuffer.length/2) != nparameters)
             {
-                static if (__traits(compiles, r.loc()))
-                    err_fatal(r.loc(), "expected %d macro arguments, had %d", nparameters, argsindexbuffer.length/2);
-                else
-                    err_fatal("expected %d macro arguments, had %d", nparameters, argsindexbuffer.length/2);
+                err_fatal("expected %d macro arguments, had %d", nparameters, argsindexbuffer.length/2);
             }
             r.popFront();
             goto Lret;
