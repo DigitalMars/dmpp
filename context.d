@@ -300,6 +300,8 @@ struct Context(R)
         auto csf = currentSourceFile();
         if (csf)
             return csf.loc;
+        if (lastloc.srcFile)
+            return lastloc;
         Loc loc;
         return loc;
     }
