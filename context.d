@@ -415,14 +415,17 @@ struct Context(R)
     SrcFile* searchForFile(bool includeNext, bool isSystem, const(char)[] s, out int pathIndex)
     {
         string currentPath;
+        auto csf = currentSourceFile();
 
         if (isSystem)
         {
-            pathIndex = cast(int)sysIndex;
+            if (csf && includeNext)
+                pathIndex = csf.pathIndex + 1;
+            else
+                pathIndex = cast(int)sysIndex;
         }
         else
         {
-            auto csf = currentSourceFile();
             if (csf)
             {
                 if (includeNext)
