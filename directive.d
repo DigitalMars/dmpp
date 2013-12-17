@@ -594,8 +594,8 @@ bool parseDirective(R)(ref R r)
                     {
                         sysstring = true;
                         r.src.popFront();
-                        s = stringbuf[];
                         r.src.lexStringLiteral(stringbuf, '>', STR.f);
+                        s = stringbuf[];
                         r.popFront();
                     }
                     else
