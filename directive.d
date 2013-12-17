@@ -700,6 +700,10 @@ bool parseDirective(R)(ref R r)
 
 /***************************************
  * Consume input until a #else, #elif, or #endif is seen.
+ * This is a specialized lexer in it only has to lex well enough
+ * to discover these directives, which only occur at the beginning
+ * of a line. The rest of the line just needs to be skipped - but
+ * be careful about comments because comments may be multiline.
  * Input:
  *      lexer   at beginning of line
  */
@@ -708,14 +712,14 @@ void skipFalseCond(R)(ref R r)
 {
     auto starti = r.src.ifstack.length;
 
-    r.popFront();
+    r.popFrontNoExpand();
     while (!r.empty)
     {
         assert(!r.empty);
         if (r.front == TOK.hash)
         {
             // Start of preprocessing directive
-            r.popFront();
+            r.popFrontNoExpand();
             if (r.front == TOK.identifier)
             {
                 auto id = r.idbuf[];
@@ -808,16 +812,20 @@ void skipFalseCond(R)(ref R r)
 
         if (r.front == TOK.eol)
         {
-            r.popFront();
+            r.popFrontNoExpand();
         }
         else
         {
-            // Skip the rest of the line
-            r.src.restOfLine();
-            r.popFront();
+            /* Skip the rest of the line
+             * This could be made faster by only checking for strings
+             * and comments.
+             */
+            while (r.front != TOK.eol)
+                r.popFrontNoExpand();
+            r.popFrontNoExpand();
         }
     }
-    err_fatal(r.loc(), "end of file found before #endif");
+    err_fatal("end of file found before #endif");
 }
 
 /*************************************
