@@ -101,6 +101,7 @@ struct SrcFile
  *      filename        file to look for
  *      paths[]         search paths
  *      starti          start searching at paths[starti]
+ *      currentPath     if !null, then the path to the enclosing file
  * Output:
  *      foundi          paths[index] is where the file was found,
  *                      paths.length if not in paths[]
@@ -108,8 +109,10 @@ struct SrcFile
  *      fully qualified filename if found, null if not
  */
 
-SrcFile* fileSearch(string filename, const string[] paths, int starti, out int foundi)
+SrcFile* fileSearch(string filename, const string[] paths, int starti, out int foundi,
+        string currentPath)
 {
+    //writefln("fileSearch(filename='%s', starti=%s, currentPath='%s')", filename, starti, currentPath);
     foundi = cast(int)paths.length;
 
     filename = strip(filename);
@@ -123,6 +126,15 @@ SrcFile* fileSearch(string filename, const string[] paths, int starti, out int f
     }
     else
     {
+        if (currentPath)
+        {
+            auto name = buildPath(currentPath, filename);
+            sf = SrcFile.lookup(name);
+            if (sf.read())
+            {
+                goto L1;
+            }
+        }
         foreach (key, path; paths[starti .. $])
         {
             auto name = buildPath(path, filename);
