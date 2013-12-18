@@ -169,7 +169,7 @@ void macrosDefine(ustring def)
     auto m = Id.defineMacro(id, parameters, text, flags);
     if (!m)
     {
-        err_fatal("redefinition of macro %s", id);
+        err_fatal("redefinition of macro %s", cast(string)id);
     }
     return;
 
@@ -365,7 +365,7 @@ bool parseDirective(R)(ref R r)
                     auto m = Id.defineMacro(macid, parameters, text, flags);
                     if (!m)
                     {
-                        err_fatal("redefinition of macro %s", id);
+                        err_fatal("redefinition of macro %s", cast(string)id);
                     }
                     r.src.expanded.on();
                     r.front = TOK.eol;
