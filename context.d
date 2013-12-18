@@ -440,7 +440,7 @@ struct Context(R)
             if (csf && includeNext)
                 pathIndex = csf.pathIndex + 1;
             else
-                pathIndex = cast(int)sysIndex;
+                pathIndex = 0; //cast(int)sysIndex;
         }
         else
         {
