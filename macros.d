@@ -1039,7 +1039,7 @@ private void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
                             r.push(ESC.brk);
                         }
 
-                        r.push(rescanbuffer[].dup);
+                        r.push(rescanbuffer[]);
                         r.setExpanded();
                         r.push(ESC.brk);
                         r.popFront();
