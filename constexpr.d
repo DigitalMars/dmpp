@@ -46,7 +46,7 @@ PPnumber Primary(Lexer)(ref Lexer r)
                         r.popFrontNoExpand();
                     }
                     if (r.front != TOK.identifier)
-                        err_fatal(r.loc(), "identifier expected after 'defined'");
+                        err_fatal("identifier expected after 'defined'");
                     else
                     {
                         PPnumber i;
@@ -60,7 +60,7 @@ PPnumber Primary(Lexer)(ref Lexer r)
                         if (sawParen)
                         {
                             if (r.front != TOK.rparen)
-                                err_fatal(r.loc(), "')' expected");
+                                err_fatal("')' expected");
                             r.popFrontNoExpand();
                         }
                         return i;

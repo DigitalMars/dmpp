@@ -56,7 +56,7 @@ void lexMacroParameters(R)(ref R r, out bool variadic, out ustring[] parameters)
             case TOK.identifier:
                 auto id = cast(ustring)r.idbuf[];
                 if (params.countUntil(id) >= 0)
-                    err_fatal(r.loc(), "multiple macro parameters named '%s'", id);
+                    err_fatal("multiple macro parameters named '%s'", id);
                 params ~= id.idup;
                 r.popFrontNoExpand();
                 switch (r.front)
@@ -70,7 +70,7 @@ void lexMacroParameters(R)(ref R r, out bool variadic, out ustring[] parameters)
                         continue;
 
                     default:
-                        err_fatal(r.loc(), "')' expected to close macro parameter list");
+                        err_fatal("')' expected to close macro parameter list");
                         return;
                 }
 
@@ -80,13 +80,13 @@ void lexMacroParameters(R)(ref R r, out bool variadic, out ustring[] parameters)
                 r.popFrontNoExpand();
                 if (r.front != TOK.rparen)
                 {
-                    err_fatal(r.loc(), "')' expected after ...");
+                    err_fatal("')' expected after ...");
                     return;
                 }
                 break;
 
             default:
-                err_fatal(r.loc(), "identifier expected for macro parameter");
+                err_fatal("identifier expected for macro parameter");
                 return;
         }
     }
@@ -289,7 +289,7 @@ bool parseDirective(R)(ref R r)
 
                         r.popFront();
                         if (r.front != TOK.eol)
-                            err_fatal(r.loc(), "end of line expected following #pragma once");
+                            err_fatal("end of line expected following #pragma once");
                         r.src.expanded.on();
                         r.src.expanded.put('\n');
                         r.src.expanded.put(r.src.front);
@@ -306,7 +306,7 @@ bool parseDirective(R)(ref R r)
 
                             r.popFront();
                             if (r.front != TOK.eol)
-                                err_fatal(r.loc(), "end of line expected following #pragma GCC system_header");
+                                err_fatal("end of line expected following #pragma GCC system_header");
                             r.src.expanded.on();
                             r.src.expanded.put('\n');
                             r.src.expanded.put(r.src.front);
@@ -335,7 +335,7 @@ bool parseDirective(R)(ref R r)
                     assert(!r.empty);
                     if (r.front != TOK.identifier)
                     {   r.src.expanded.on();
-                        err_fatal(r.loc(), "identifier expected following #define");
+                        err_fatal("identifier expected following #define");
                         return true;
                     }
 
@@ -365,7 +365,7 @@ bool parseDirective(R)(ref R r)
                     auto m = Id.defineMacro(macid, parameters, text, flags);
                     if (!m)
                     {
-                        err_fatal(r.loc(), "redefinition of macro %s", id);
+                        err_fatal("redefinition of macro %s", id);
                     }
                     r.src.expanded.on();
                     r.front = TOK.eol;
@@ -382,7 +382,7 @@ bool parseDirective(R)(ref R r)
                     assert(!r.empty);
                     if (r.front != TOK.identifier)
                     {   r.src.expanded.on();
-                        err_fatal(r.loc(), "identifier expected following #undef");
+                        err_fatal("identifier expected following #undef");
                         return true;
                     }
 
@@ -392,7 +392,7 @@ bool parseDirective(R)(ref R r)
 
                     r.popFront();
                     if (r.front != TOK.eol)
-                        err_fatal(r.loc(), "end of line expected following #undef");
+                        err_fatal("end of line expected following #undef");
 
                     r.src.expanded.on();
                     return true;
@@ -400,7 +400,7 @@ bool parseDirective(R)(ref R r)
 
                 case "error":
                     auto msg = r.src.restOfLine();
-                    err_fatal(r.loc(), "%s", cast(string)msg);
+                    err_fatal("%s", cast(string)msg);
                     return true;
 
                 case "if":
@@ -417,7 +417,7 @@ bool parseDirective(R)(ref R r)
                     r.src.ifstack.put(CONDif);
 
                     if (r.front != TOK.eol)
-                        err_fatal(r.loc(), "end of line expected after #if expression");
+                        err_fatal("end of line expected after #if expression");
 
                     if (!cond)
                     {
@@ -439,7 +439,7 @@ bool parseDirective(R)(ref R r)
                     assert(!r.empty);
                     if (r.front != TOK.identifier)
                     {   r.src.expanded.on();
-                        err_fatal(r.loc(), "identifier expected following #ifdef");
+                        err_fatal("identifier expected following #ifdef");
                         return true;
                     }
 
@@ -451,7 +451,7 @@ bool parseDirective(R)(ref R r)
                 Ldef:
                     r.popFront();
                     if (r.front != TOK.eol)
-                        err_fatal(r.loc(), "end of line expected following identifier");
+                        err_fatal("end of line expected following identifier");
 
                     if (!cond)
                     {
@@ -478,7 +478,7 @@ bool parseDirective(R)(ref R r)
                     assert(!r.empty);
                     if (r.front != TOK.identifier)
                     {   r.src.expanded.on();
-                        err_fatal(r.loc(), "identifier expected following #ifndef");
+                        err_fatal("identifier expected following #ifndef");
                         return true;
                     }
 
@@ -503,9 +503,9 @@ bool parseDirective(R)(ref R r)
                     r.src.expanded.lineBuffer.initialize();
                     r.popFront();
                     if (r.front != TOK.eol)
-                        err_fatal(r.loc(), "end of line expected after #else");
+                        err_fatal("end of line expected after #else");
                     if (r.src.ifstack.length == 0 || r.src.ifstack.last() == CONDendif)
-                        err_fatal(r.loc(), "#else by itself");
+                        err_fatal("#else by itself");
                     else
                     {
                         r.src.ifstack.pop();
@@ -526,7 +526,7 @@ bool parseDirective(R)(ref R r)
                         assert(r.front != TOK.eof);
                     }
                     if (r.src.ifstack.length == 0 || r.src.ifstack.last() == CONDendif)
-                        err_fatal(r.loc(), "#elif by itself");
+                        err_fatal("#elif by itself");
                     else
                     {
                         r.src.ifstack.pop();
@@ -614,14 +614,14 @@ bool parseDirective(R)(ref R r)
                         else if (r.front == TOK.sysstring)
                             sysstring = true;
                         else
-                            err_fatal(r.loc(), "string expected");
+                            err_fatal("string expected");
                         s = r.getStringLiteral();
                         r.popFront();
                     }
                     if (s.length == 0)
-                        err_fatal(r.loc(), "filename expected");
+                        err_fatal("filename expected");
                     if (r.front != TOK.eol)
-                        err_fatal(r.loc(), "end of line expected following #include");
+                        err_fatal("end of line expected following #include");
                     r.src.unget();
                     r.src.push('\n');
                     r.src.includeFile(includeNext, sysstring, cast(string)s.idup);
@@ -632,7 +632,7 @@ bool parseDirective(R)(ref R r)
                 }
 
                 default:
-                    err_fatal(r.loc(), "unrecognized preprocessing directive #%s", id);
+                    err_fatal("unrecognized preprocessing directive #%s", id);
                     r.popFront();
                     return true;
             }
@@ -682,7 +682,7 @@ bool parseDirective(R)(ref R r)
             }
             if (r.empty || r.front != TOK.eol)
             {
-                err_fatal(r.loc(), "end of line expected after linemarker");
+                err_fatal("end of line expected after linemarker");
             }
             break;
         }
@@ -697,7 +697,7 @@ bool parseDirective(R)(ref R r)
 
         default:
         Ldefault:
-            err_fatal(r.loc(), "preprocessing directive expected");
+            err_fatal("preprocessing directive expected");
             r.popFront();
             break;
     }
@@ -741,7 +741,7 @@ void skipFalseCond(R)(ref R r)
                         final switch (r.src.ifstack.last())
                         {
                             case CONDendif:
-                                err_fatal(r.loc(), "#elif not following #if");
+                                err_fatal("#elif not following #if");
                                 break;
 
                             case CONDif:
@@ -756,7 +756,7 @@ void skipFalseCond(R)(ref R r)
                                     r.src.ifstack.put(CONDif);
 
                                     if (r.front != TOK.eol)
-                                        err_fatal(r.loc(), "end of line expected following #elif expr");
+                                        err_fatal("end of line expected following #elif expr");
 
                                     if (cond)
                                     {
@@ -776,7 +776,7 @@ void skipFalseCond(R)(ref R r)
                         final switch (r.src.ifstack.last())
                         {
                             case CONDendif:
-                                err_fatal(r.loc(), "#else not following #if");
+                                err_fatal("#else not following #if");
                                 break;
 
                             case CONDif:
