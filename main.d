@@ -47,7 +47,7 @@ else
                     context.reset();
 
                 auto srcFilename = params.sourceFilenames[i];
-                auto outFilename = params.outFilenames[i];
+                auto outFilename = params.stdout ? "-" : params.outFilenames[i];
 
                 if (context.params.verbose)
                     writefln("from %s to %s", srcFilename, outFilename);
@@ -59,11 +59,10 @@ else
                 if (context.doDeps)
                     context.deps ~= srcFilename;
 
-                scope(failure) std.file.remove(outFilename);
+                scope(failure) if (!params.stdout) std.file.remove(outFilename);
 
-                auto fout = File(outFilename, "wb");        // has destructor
+                auto fout = params.stdout ? stdout : File(outFilename, "wb");
                 auto foutr = fout.lockingTextWriter();      // has destructor
-                //auto foutr = stdout.lockingTextWriter();      // has destructor
 
                 context.localStart(sf, &foutr);
                 context.preprocess();

@@ -30,6 +30,7 @@ struct Params
     string[] includes;
     string[] sysincludes;
     bool verbose;
+    bool stdout;
 }
 
 
@@ -58,6 +59,7 @@ Options:
   -I path           path to #include files
   --isystem path    path to system #include files
   -o filename       preprocessed output file
+  --stdout          output to stdout
   -v                verbose
 ");
         exit(EXIT_SUCCESS);
@@ -75,6 +77,7 @@ Options:
         "isystem",      &p.sysincludes,
         "dep",          &p.depFilename,
         "output|o",     &p.outFilenames,
+        "stdout",       &p.stdout,
         "v",            &p.verbose);
 
     // Fix up -Dname=value stuff. This will be superseded by
@@ -100,14 +103,17 @@ Options:
          */
         foreach (filename; p.sourceFilenames)
         {
-            string outname;
+            string outname, ext = ".ii";
             if (extension(filename) == ".c")
+            {
                 outname = baseName(filename, ".c");
-            else if (extension(filename) == ".cpp")
+                ext = ".i";
+            }
+            else if ([".cpp", "cxx", ".hpp"].canFind(extension(filename)))
                 outname = baseName(filename, ".cpp");
             else
                 outname = baseName(filename);
-            p.outFilenames ~= outname ~ ".i";
+            p.outFilenames ~= outname ~ ext;
         }
     }
 
