@@ -365,7 +365,7 @@ bool parseDirective(R)(ref R r)
                     auto m = Id.defineMacro(macid, parameters, text, flags);
                     if (!m)
                     {
-                        err_fatal("redefinition of macro %s", cast(string)id);
+                        err_fatal("redefinition of macro %s", cast(string)macid);
                     }
                     r.src.expanded.on();
                     r.front = TOK.eol;

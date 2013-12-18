@@ -11,6 +11,7 @@ module id;
 
 import core.stdc.stdio;
 import core.stdc.time;
+import std.stdio;
 
 import main;
 
@@ -81,12 +82,13 @@ struct Id
      */
     static Id* defineMacro(ustring name, ustring[] parameters, ustring text, uint flags)
     {
+        //writefln("defineMacro(%s, %s, %s, %s)", cast(string)name, cast(string[])parameters, cast(string)text, flags);
         auto m = pool(name);
         if (m.flags & IDmacro)
         {
             if ((m.flags ^ flags) & (IDpredefined | IDdotdotdot | IDfunctionLike) ||
                 m.parameters != parameters ||
-                text != text)
+                m.text != text)
             {
                 return null;
             }
