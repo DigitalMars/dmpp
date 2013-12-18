@@ -861,11 +861,23 @@ void includeFile(R)(R ctx, bool includeNext, bool sysstring, const(char)[] s)
         return;
     }
 
+    void writeStatus(char c)
+    {
+        if (ctx.params.verbose)
+        {
+            writef("%s%s",
+                    c,
+                    sysstring ? "S" : " ");
+            for (auto level = ctx.nestLevel(); level > 0; --level)
+                write(' ');
+            writeln(sf.filename);
+        }
+    }
+
     // Check for #pragma once
     if (sf.once)
     {
-        if (ctx.params.verbose)
-            writefln("skipping '%s'", sf.filename);
+        writeStatus('O');
         return;
     }
 
@@ -875,13 +887,13 @@ void includeFile(R)(R ctx, bool includeNext, bool sysstring, const(char)[] s)
         auto m = Id.search(sf.includeGuard);
         if (m && m.flags & Id.IDmacro)
         {
-            if (ctx.params.verbose)
-                writefln("skipping '%s'", sf.filename);
+            writeStatus('G');
             return;
         }
     }
 
     //writefln("found '%s', pathIndex = %s", sf.filename, pathIndex);
+    writeStatus(sf.cachedRead ? 'C' : ' ');
     ctx.pushFile(sf, sysstring, pathIndex);
 }
 

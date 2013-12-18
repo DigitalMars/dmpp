@@ -29,6 +29,7 @@ struct SrcFile
     ustring includeGuard;       // macro #define used for #include guard
     bool once;                  // set if #pragma once set
     bool doesNotExist;          // file does not exist
+    bool cachedRead;            // read a cached version
 
     __gshared SrcFile[string] table;
 
@@ -56,6 +57,7 @@ struct SrcFile
              * will be skipped instead of read.
              */
             sf.once = false;
+            sf.cachedRead = false;
         }
     }
 
@@ -78,7 +80,9 @@ struct SrcFile
             return false;
 
         if (contents)
+        {   cachedRead = true;
             return true;                // already read
+        }
 
         bool result = true;
         try

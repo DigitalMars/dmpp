@@ -141,8 +141,6 @@ struct Context(R)
     void pushFile(SrcFile* sf, bool isSystem, int pathIndex)
     {
         //write("pushFile ", pathIndex);
-        if (params.verbose)
-            writefln("reading %sfile %s", isSystem ? "system " : "", sf.filename);
         auto s = push();
         psourceFile = s;
         s.addFile(sf, isSystem, pathIndex);
@@ -373,6 +371,19 @@ struct Context(R)
         return psource;
     }
 
+    int nestLevel()
+    {
+        int level = -1;
+        auto csf = currentSourceFile();
+        while (csf)
+        {
+            if (csf.isFile)
+                ++level;
+            csf = csf.prev;
+        }
+        return level;
+    }
+
     bool isExpanded() { return psource.isExpanded; }
 
     void setExpanded() { psource.isExpanded = true; }
@@ -443,9 +454,8 @@ struct Context(R)
         if (!sf)
             return null;
 
-        if (sf.contents == null)
+        if (!sf.cachedRead)
         {
-            sf.read();
             if (!isSystem && doDeps)
                 deps ~= sf.filename;
         }
