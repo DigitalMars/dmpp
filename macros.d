@@ -487,7 +487,7 @@ unittest
     assert(outbuf[] == `"ab\?\\x'y'\"z\""`);
 
     outbuf.initialize();
-    stringize(outbuf, cast(ustring)(`'\'a\\'b\`));
+    stringize(outbuf, cast(ustring)(`'\'a\\'b\`));//`
     assert(outbuf[] == `"'\\'a\\\\'b\"`);
 
     outbuf.initialize();
