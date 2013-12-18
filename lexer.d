@@ -800,7 +800,7 @@ struct Lexer(R) if (isInputRange!R)
                     goto default;
 
                 default:
-                    err_fatal(loc(), "unrecognized preprocessor token x%02x", c);
+                    err_fatal("unrecognized preprocessor token x%02x", c);
                     src.popFront();
                     break;
             }

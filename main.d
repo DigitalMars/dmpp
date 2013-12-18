@@ -59,6 +59,8 @@ else
                 if (context.doDeps)
                     context.deps ~= srcFilename;
 
+                scope(failure) std.file.remove(outFilename);
+
                 auto fout = File(outFilename, "wb");        // has destructor
                 auto foutr = fout.lockingTextWriter();      // has destructor
                 //auto foutr = stdout.lockingTextWriter();      // has destructor
@@ -75,7 +77,9 @@ else
         }
         catch (Exception e)
         {
-            err_fatal(context.loc(), e.msg);
+            context.loc().write(&stderr);
+            stderr.writeln(e.msg);
+            exit(EXIT_FAILURE);
         }
 
         context.globalFinish();
@@ -91,12 +95,3 @@ void err_fatal(T...)(T args)
     app.formattedWrite(args);
     throw new Exception(app.data);
 }
-
-void err_fatal(L:Loc, T...)(L loc, T args)
-{
-    loc.write(&stderr);
-    stderr.writefln(args);
-    exit(EXIT_FAILURE);
-}
-
-

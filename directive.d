@@ -857,7 +857,7 @@ void includeFile(R)(R ctx, bool includeNext, bool sysstring, const(char)[] s)
     auto sf = ctx.searchForFile(includeNext, curdir, sysstring, s, pathIndex);
     if (!sf)
     {
-        err_fatal(ctx.loc(), "#include file '%s' not found", s);
+        err_fatal("#include file '%s' not found", s);
         return;
     }
 
