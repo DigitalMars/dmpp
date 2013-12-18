@@ -37,6 +37,7 @@ R lexNumber(R)(R r, out ppint_t result, out bool isunsigned, out bool isinteger)
 
     BitBucket!E bitbucket = void;
 
+    bool overflow = false;
     isinteger = true;
     int radix = 10;
     ppuint_t n = 0;
@@ -141,8 +142,7 @@ R lexNumber(R)(R r, out ppint_t result, out bool isunsigned, out bool isinteger)
         auto n2 = n * radix;
         if (n2 / radix != n || n2 + d < n)
         {
-            err_fatal("integer overflow");
-            break;
+            overflow = true;
         }
 
         n = n2 + d;
@@ -181,6 +181,8 @@ Ldone:
     if (flags & FLAGS.U || n >= 0x8000_0000_0000_0000LU)
         isunsigned = true;
     result = n;
+    if (overflow && isinteger)
+        err_fatal("integer overflow");
     return r;
 }
 
