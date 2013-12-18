@@ -17,6 +17,9 @@ import core.stdc.string;
  * most uses. If the need exceeds the size, it will resize it
  * using malloc() and friends.
  */
+
+debug=Textbuf;
+
 struct Textbuf(T)
 {
     this(T[] buf)
@@ -95,6 +98,7 @@ struct Textbuf(T)
      */
     void free()
     {
+        debug(Textbuf) buf[] = 0;
         if (resized)
             .free(buf.ptr);
         this = this.init;
@@ -121,6 +125,7 @@ struct Textbuf(T)
             assert(p);
             memcpy(p, buf.ptr, i * T.sizeof);
             resized = true;
+            debug(Textbuf) buf[] = 0;
         }
         buf = (cast(T*)p)[0 .. newsize];
     }

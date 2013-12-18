@@ -401,6 +401,7 @@ struct Lexer(R) if (isInputRange!R)
                 case '[':
                 case ']':
                 case ';':
+                case '@':  // why does @ appear in boost/type_traits/detail/is_function_ptr_helper.hpp
                     src.popFront();
                     goto Lother;
 
@@ -619,7 +620,8 @@ struct Lexer(R) if (isInputRange!R)
                                     break;
                                 }
 
-writefln("macroScanArguments('%s')", cast(string)m.name);
+//writefln("lexer macroScanArguments('%s')", cast(string)m.name);
+//if (m.name == "BOOST_MPL_AUX_NA_SPEC") logging = true;
                                 src = src.macroScanArguments(m.parameters.length,
                                         !!(m.flags & Id.IDdotdotdot),
                                          args, emptyrange, argsbuffer);

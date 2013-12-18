@@ -240,6 +240,8 @@ unittest
 
 bool parseDirective(R)(ref R r)
 {
+    //writefln("parseDirective() seenTokens = %s", r.src.currentSourceFile().seenTokens);
+
     // Ensure the '#' is left-justified in the output
     r.src.expanded.lineBuffer.initialize();
     r.src.expanded.put('#');
@@ -443,6 +445,7 @@ bool parseDirective(R)(ref R r)
 
                     auto m = Id.search(r.idbuf[]);
                     cond = (m && m.flags & Id.IDmacro);
+                    //if (cond) writefln("ifdef %s", cast(string)m.name);
 
                     r.src.ifstack.put(CONDif);
                 Ldef:
@@ -533,34 +536,37 @@ bool parseDirective(R)(ref R r)
                     return true;
 
                 case "endif":
-                    // Turn off expanded output so this line is not emitted
-                    r.src.expanded.off();
-                    r.src.expanded.lineBuffer.initialize();
-                    r.popFront();
-                    if (r.front != TOK.eol)
-                        err_fatal(r.loc(), "end of line expected after #endif");
-                    r.src.expanded.on();
-                    r.src.expanded.put('\n');
-                    r.src.expanded.put(r.src.front);
+                {
+                    auto result = true;
+
                     if (r.src.ifstack.length == 0)
-                        err_fatal(r.loc(), "#endif by itself");
+                        err_fatal("#endif by itself");
                     else
                     {
+                        auto sf = r.src.currentSourceFile();
                         if (r.src.ifstack.last() == CONDguard)
                         {
-                            auto sf = r.src.currentSourceFile();
                             if (sf &&
                                 sf.includeGuard != null &&
                                 sf.ifstacki == r.src.ifstack.length() - 1)
                             {
                                 sf.seenTokens = false;
-                                r.src.ifstack.pop();
-                                return false;
+                                result = false;
                             }
                         }
                         r.src.ifstack.pop();
                     }
-                    return true;
+                    // Turn off expanded output so this line is not emitted
+                    r.src.expanded.off();
+                    r.src.expanded.lineBuffer.initialize();
+                    r.popFront();
+                    if (r.front != TOK.eol)
+                        err_fatal("end of line expected after #endif");
+                    r.src.expanded.on();
+                    r.src.expanded.put('\n');
+                    r.src.expanded.put(r.src.front);
+                    return result;
+                }
 
                 case "include_next":
                     includeNext = true;
@@ -820,7 +826,7 @@ void skipFalseCond(R)(ref R r)
              * This could be made faster by only checking for strings
              * and comments.
              */
-            while (r.front != TOK.eol)
+            while (r.front != TOK.eol && r.front != TOK.eof)
                 r.popFrontNoExpand();
             r.popFrontNoExpand();
         }
@@ -838,6 +844,7 @@ void skipFalseCond(R)(ref R r)
 
 void includeFile(R)(R ctx, bool includeNext, bool sysstring, const(char)[] s)
 {
+    //writefln("includeFile('%s')", s);
     s = strip(s);       // remove leading and trailing whitespace
 
     bool curdir = !sysstring && !includeNext;   // always look at current directory first

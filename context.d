@@ -271,6 +271,7 @@ struct Context(R)
         if (psource && psource.texti)
         {
             --psource.texti;
+            assert(psource.lineBuffer[psource.texti] == xc);
         }
     }
 

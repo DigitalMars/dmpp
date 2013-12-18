@@ -61,6 +61,7 @@ else
 
                 auto fout = File(outFilename, "wb");        // has destructor
                 auto foutr = fout.lockingTextWriter();      // has destructor
+                //auto foutr = stdout.lockingTextWriter();      // has destructor
 
                 context.localStart(sf, &foutr);
                 context.preprocess();

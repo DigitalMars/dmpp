@@ -48,6 +48,7 @@ struct Loc
      */
     void write(File* f)
     {
+        //writefln("%s(%s) %s", srcFile ? srcFile.filename : "", lineNumber, isSystem);
         if (srcFile)
             f.writef("%s(%d) : ", srcFile.filename, lineNumber);
     }
