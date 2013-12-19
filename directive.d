@@ -806,8 +806,11 @@ void skipFalseCond(R)(ref R r)
                             r.src.ifstack.pop();
 
                             // Skip the rest of the line
-                            r.src.restOfLine();
+                            r.popFrontNoExpand();
+                            if (r.front != TOK.eol)
+                                err_fatal("end of line expected after #endif");
                             r.src.expanded.on();
+                            r.src.expanded.put(r.src.front);
                             r.popFront();
                             return;
                         }
