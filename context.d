@@ -46,7 +46,7 @@ struct Context(R)
     const size_t sysIndex;    // paths[sysIndex] is start of system #includes
 
     bool errors;        // true if any errors occurred
-    uint counter;       // for __COUNTER__
+    __gshared uint counter;       // for __COUNTER__
 
     bool doDeps;        // true if doing dependency file generation
     string[] deps;      // dependency file contents
