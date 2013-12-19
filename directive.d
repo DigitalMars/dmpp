@@ -365,7 +365,9 @@ bool parseDirective(R)(ref R r)
                     auto m = Id.defineMacro(macid, parameters, text, flags);
                     if (!m)
                     {
-                        err_fatal("redefinition of macro %s", cast(string)macid);
+                        auto csf = r.src.currentSourceFile();
+                        if (csf && !csf.loc.isSystem)
+                            err_fatal("redefinition of macro %s", cast(string)macid);
                     }
                     r.src.expanded.on();
                     r.src.expanded.put(r.src.front);
