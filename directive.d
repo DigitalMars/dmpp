@@ -671,7 +671,7 @@ bool parseDirective(R)(ref R r)
             r.needStringLiteral();
             r.popFront();
             if (r.empty || r.front == TOK.eol)
-                break;
+                goto LlineDone;
             while (!r.empty && r.front == TOK.string)
             {
                 auto s = cast(string)r.getStringLiteral();
@@ -699,6 +699,7 @@ bool parseDirective(R)(ref R r)
             {
                 err_fatal("end of line expected after linemarker");
             }
+        LlineDone:
             if (!linemarker)
             {
                 r.src.expanded.on();
