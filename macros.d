@@ -1331,7 +1331,9 @@ private R macroScanArgument(R, S, T)(R r1, ref S s, bool va_args, ref T outbuf)
                     else
                         r = r.skipCComment();
                     outbuf.pop();               // elide comment from preprocessed output
-                    goto case ' ';
+                    if (outbuf.last() != ' ')
+                        outbuf.put(' ');
+                    continue;
                 }
                 break;
 
