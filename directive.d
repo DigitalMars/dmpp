@@ -266,13 +266,22 @@ bool parseDirective(R)(ref R r)
             {
                 case "line":
                     // #line directive
+                    // Turn off expanded output so this line is not emitted
+                    r.src.expanded.off();
+                    r.src.expanded.lineBuffer.initialize();
+
                     linemarker = false;
                     r.popFront();
-                    if (r.empty)
-                        goto Leof;
+                    assert(!r.empty);
                     if (r.front == TOK.integer)
                         goto Lline;
-                    goto Ldefault;
+
+                    if (r.front != TOK.eol)
+                        err_fatal("end of line expected following #line");
+                    r.src.expanded.on();
+                    r.src.expanded.put('\n');
+                    r.src.expanded.put(r.src.front);
+                    return false;
 
                 case "pragma":
                     r.popFront();
@@ -689,6 +698,11 @@ bool parseDirective(R)(ref R r)
             if (r.empty || r.front != TOK.eol)
             {
                 err_fatal("end of line expected after linemarker");
+            }
+            if (!linemarker)
+            {
+                r.src.expanded.on();
+                r.src.expanded.put(r.src.front);
             }
             break;
         }
