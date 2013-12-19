@@ -362,6 +362,9 @@ unittest
 
     r = (cast(immutable(ubyte)[])" // \n8").skipWhitespace();
     assert(!r.empty && r.front == '8');
+
+    r = (cast(immutable(ubyte)[])"*").skipWhitespace();
+    assert(r.empty);
 }
 
 
