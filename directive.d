@@ -217,6 +217,7 @@ unittest
     assert(m && m.name == n && m.flags == (Id.IDmacro | Id.IDpredefined | Id.IDfunctionLike | Id.IDdotdotdot) && m.text == "value");
     assert(m.parameters == ["a", "__VA_ARGS__"]);
   }
+/+
   {
     auto n = cast(ustring)"betty5";
     auto d = n ~ cast(ustring)" (a ...) =value ";
@@ -227,6 +228,7 @@ unittest
 //writeln(m.parameters);
     assert(m.parameters == ["a", "__VA_ARGS__"]);
   }
++/
 }
 
 

@@ -69,6 +69,7 @@ struct Context(R)
     bool uselastloc;
 
     __gshared Context* _ctx;            // shameful use of global variable
+    Context* prev;                      // previous one in stack of these
 
     // Stack of #if/#else/#endif nesting
     ubyte[8] tmpbuf = void;
@@ -93,6 +94,24 @@ struct Context(R)
         ifstack.initialize();
         expanded.initialize(&this);
         setContext();
+    }
+
+    /**************************************
+     * Create a new Context on a stack of them.
+     */
+    Context* pushContext()
+    {
+        auto ctx = new Context(params);
+        ctx.psourceFile = psourceFile;
+        ctx.prev = &this;
+        ctx.expanded.off();
+        return ctx;
+    }
+
+    Context* popContext()
+    {
+        prev.setContext();
+        return prev;
     }
 
     /***************************

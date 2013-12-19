@@ -747,14 +747,11 @@ private void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
     auto ctx = Context.getContext();
     ctx.expanded.off();
 
-    auto rc = Context(ctx.params);
-    rc.psourceFile = ctx.psourceFile;   // for __FILE__ and __LINE__
+    auto r = ctx.pushContext();
 
-    rc.expanded.off();
-    rc.push(text);
-    rc.popFront();
+    r.push(text);
+    r.popFront();
 
-    auto r = &rc;
 
   Louter:
     while (!r.empty)
@@ -1007,7 +1004,7 @@ private void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
                             //writefln("macroScanArguments('%s')", cast(string)m.name);
                             r = r.macroScanArguments(m.parameters.length,
                                     !!(m.flags & Id.IDdotdotdot),
-                                     args, ctx, argsbuffer);
+                                     args, argsbuffer);
                         }
 
 //writefln("\t3outbuf[] = '%s'", cast(string)outbuf[]);
@@ -1064,7 +1061,8 @@ Ldone:
     r.localFinish();
 
     // Restore previous context
-    ctx.setContext();
+    r.popContext();
+
     ctx.expanded.on();
 
 //    debug (MacroExpand)
@@ -1117,7 +1115,7 @@ void macroRescan(Context, R)(Id* m, const(uchar)[] text, ref R outbuf)
  *      r past closing )
  */
 
-R macroScanArguments(R, S, T)(R r, size_t nparameters, bool variadic, out ustring[] args, ref S s,
+R macroScanArguments(R, T)(R r, size_t nparameters, bool variadic, out ustring[] args,
         ref T argsbuffer)
 {
     /* Temporary buffer to store indices into argsbuffer[] rather than pointers,
@@ -1131,7 +1129,7 @@ R macroScanArguments(R, S, T)(R r, size_t nparameters, bool variadic, out ustrin
     while (1)
     {
         auto len = argsbuffer.length;   // we'll be appending after len
-        r = r.macroScanArgument(s, va_args, argsbuffer);
+        r = r.macroScanArgument(va_args, argsbuffer);
 
         if (nparameters || argsbuffer.length > len + 1)
         {
@@ -1199,8 +1197,6 @@ Lret:
 
 unittest
 {
-    EmptyInputRange!uchar empty;
-
     ustring s;
     ustring[] args;
     s = cast(ustring)"ab,cd )a";
@@ -1209,14 +1205,14 @@ unittest
     auto argsbuffer = Textbuf!uchar(tmpargsbuf);
 
     argsbuffer.initialize();
-    auto r = s.macroScanArguments(2, false, args, empty, argsbuffer);
+    auto r = s.macroScanArguments(2, false, args, argsbuffer);
 //writefln("'%s', %s", args, args.length);
     assert(!r.empty && r.front == 'a');
     assert(args == ["ab","cd"]);
 
     s = cast(ustring)"ab )a";
     argsbuffer.initialize();
-    r = s.macroScanArguments(2, true, args, empty, argsbuffer);
+    r = s.macroScanArguments(2, true, args, argsbuffer);
 //writefln("'%s', %s", args, args.length);
     assert(!r.empty && r.front == 'a');
     assert(args == ["ab",""]);
@@ -1229,39 +1225,45 @@ unittest
  * Input:
  *      r1      input range at start of arg
  *      va_args if scanning argument for __VA_ARGS__
- *      s       supplemental range if s1 runs out
  * Output:
  *      the scanned argument is written to outbuf
  * Returns:
  *      r1 set past end of argument
  */
 
-private R macroScanArgument(R, S, T)(R r1, ref S s, bool va_args, ref T outbuf)
+private R macroScanArgument(R, T)(R r1, bool va_args, ref T outbuf)
 {
     alias Unqual!(ElementEncodingType!R) E;
 
-    struct Chain
+    enum bool isContext = __traits(compiles, r1.prev);
+
+    static if (isContext)
     {
-        @property bool empty()
+        struct Chain
         {
-            return r1.empty && s.empty;
+            @property bool empty()
+            {
+                return r1.empty && r1.prev && r1.prev.empty;
+            }
+
+            @property E front()
+            {
+                return r1.empty ? cast(E)r1.prev.front : cast(E)r1.front;
+            }
+
+            void popFront()
+            {
+                if (r1.empty)
+                    r1.prev.popFront();
+                else
+                    r1.popFront();
+            }
         }
 
-        @property E front()
-        {
-            return r1.empty ? cast(E)s.front : cast(E)r1.front;
-        }
-
-        void popFront()
-        {
-            if (r1.empty)
-                s.popFront();
-            else
-                r1.popFront();
-        }
+        Chain r;
     }
-
-    Chain r;
+    else
+        alias r1 r;
 
     outbuf.put(0);
 
@@ -1352,52 +1354,49 @@ private R macroScanArgument(R, S, T)(R r1, ref S s, bool va_args, ref T outbuf)
 
 unittest
 {
-    EmptyInputRange!uchar uempty;
-    EmptyInputRange!char  empty;
-
     uchar[100] tmpbuf = void;
     auto arg = Textbuf!uchar(tmpbuf);
 
     ustring s = cast(ustring)" \t\r\n\v\f /**/ //
  )a";
     arg.initialize();
-    auto r = s.macroScanArgument(uempty, false, arg);
+    auto r = s.macroScanArgument(false, arg);
     assert(!r.empty && r.front == ')');
     assert(arg[1 .. arg.length] == "");
 
     s = cast(ustring)" ((,)) )a";
     arg.initialize();
-    r = s.macroScanArgument(empty, false, arg);
+    r = s.macroScanArgument(false, arg);
     assert(!r.empty && r.front == ')');
     assert(arg[1 .. arg.length] == " ((,))");
 
     s = cast(ustring)"ab,cd )a";
     arg.initialize();
-    r = s.macroScanArgument(empty, false, arg);
+    r = s.macroScanArgument(false, arg);
     assert(!r.empty && r.front == ',');
     assert(arg[1 .. arg.length] == "ab");
 
     s = cast(ustring)"ab,cd )a";
     arg.initialize();
-    r = s.macroScanArgument(empty, true, arg);
+    r = s.macroScanArgument(true, arg);
     assert(!r.empty && r.front == ')');
     assert(arg[1 .. arg.length] == "ab,cd");
 
     s = cast(ustring)"a'b',cd )a";
     arg.initialize();
-    r = s.macroScanArgument(empty, false, arg);
+    r = s.macroScanArgument(false, arg);
     assert(!r.empty && r.front == ',');
     assert(arg[1 .. arg.length] == "a'b'");
 
     s = cast(ustring)`a"b",cd )a`;
     arg.initialize();
-    r = s.macroScanArgument(empty, false, arg);
+    r = s.macroScanArgument(false, arg);
     assert(!r.empty && r.front == ',');
     assert(arg[1 .. arg.length] == `a"b"`);
 
     s = cast(ustring)`aR"x(b")x",cd )a`;
     arg.initialize();
-    r = s.macroScanArgument(empty, false, arg);
+    r = s.macroScanArgument(false, arg);
 //writefln("|%s|, %s", arg, arg.length);
     assert(!r.empty && r.front == ',');
     assert(arg[1 .. arg.length] == `aR"x(b")x"`);

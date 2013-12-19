@@ -90,7 +90,6 @@ struct Lexer(R) if (isInputRange!R)
 
     alias Unqual!(ElementEncodingType!R) E;
     BitBucket!E bitbucket = void;
-    EmptyInputRange!E emptyrange = void;
 
     //enum bool isContext = std.traits.hasMember!(R, "expanded");
     enum bool isContext = __traits(compiles, src.expanded);
@@ -624,7 +623,7 @@ struct Lexer(R) if (isInputRange!R)
 //if (m.name == "BOOST_MPL_AUX_NA_SPEC") logging = true;
                                 src = src.macroScanArguments(m.parameters.length,
                                         !!(m.flags & Id.IDdotdotdot),
-                                         args, emptyrange, argsbuffer);
+                                         args, argsbuffer);
                             }
                             auto xcnext = src.front;
 
