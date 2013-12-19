@@ -10,6 +10,7 @@ module textbuf;
 
 import core.stdc.stdlib;
 import core.stdc.string;
+import std.stdio;
 
 /**************************************
  * Textbuf encapsulates using a local array as a buffer.
@@ -18,7 +19,7 @@ import core.stdc.string;
  * using malloc() and friends.
  */
 
-debug=Textbuf;
+//debug=Textbuf;
 
 struct Textbuf(T)
 {
@@ -111,6 +112,7 @@ struct Textbuf(T)
 
     void resize(size_t newsize)
     {
+        //writefln("oldsize %s newsize %s", buf.length, newsize);
         void* p;
         if (resized)
         {

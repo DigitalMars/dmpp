@@ -42,6 +42,9 @@ targets : dmpp.exe dmpp.html
 dmpp.exe : $(SRCS)
 	$(DMD) -g $(SRCS) -ofdmpp.exe
 
+release :
+	$(DMD) -O -release -inline -noboundscheck $(SRCS) -ofdmpp.exe
+
 unittest : $(SRCS)
 	$(DMD) -g $(SRCS) -ofdmpp.exe -unittest -cov
 
