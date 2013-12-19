@@ -115,7 +115,13 @@ R lexNumber(R)(R r, out ppint_t result, out bool isunsigned, out bool isinteger)
                 {
                     if (c == 'e' || c == 'E')
                         goto Lsawexponent;
-                    err_fatal("%s digit expected", radix == 8 ? "octal" : "decimal");
+                    if (c == 'f' || c == 'F')
+                    {
+                        r.popFront();
+                        isinteger = false;
+                        return r;
+                    }
+                    err_fatal("%s digit expected not '%s'", radix == 8 ? "octal" : "decimal", cast(char)c);
                 }
                 if (c >= 'a')
                     d = c + 10 - 'a';
