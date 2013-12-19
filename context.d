@@ -51,8 +51,8 @@ struct Context(R)
     bool doDeps;        // true if doing dependency file generation
     string[] deps;      // dependency file contents
 
-    Source[4] sources;  // rare that more than 4 is needed by macroExpand()
-    Source* psource;
+    SourceStack stack;
+
     Source* psourceFile;
 
     debug (ContextStats)
@@ -61,15 +61,13 @@ struct Context(R)
         int sourceimax;
     }
 
-    uchar xc = ' ';
-
     Expanded!R expanded;         // for expanded (preprocessed) output
 
     Loc lastloc;
     bool uselastloc;
 
     __gshared Context* _ctx;            // shameful use of global variable
-    Context* prev;                      // previous one in stack of these
+    //Context* prev;                      // previous one in stack of these
 
     // Stack of #if/#else/#endif nesting
     ubyte[8] tmpbuf = void;
@@ -88,8 +86,6 @@ struct Context(R)
         combineSearchPaths(params.includes, params.sysincludes, pathsx, sysIndex);
         paths = pathsx;         // workaround for Bugzilla 11743
 
-        Source.initialize(sources, null, null);
-
         ifstack = Textbuf!ubyte(tmpbuf);
         ifstack.initialize();
         expanded.initialize(&this);
@@ -101,17 +97,23 @@ struct Context(R)
      */
     Context* pushContext()
     {
-        auto ctx = new Context(params);
-        ctx.psourceFile = psourceFile;
-        ctx.prev = &this;
-        ctx.expanded.off();
-        return ctx;
+        auto st = SourceStack.allocate();
+        auto root = st.psourceRoot;
+        *st = stack;
+        stack = stack.init;
+        stack.psourceRoot = root;
+        stack.prev = st;
+        return &this;
     }
 
     Context* popContext()
     {
-        prev.setContext();
-        return prev;
+        auto root = stack.psourceRoot;
+        auto p = stack.prev;
+        stack = *stack.prev;
+        p.psourceRoot = root;
+        p.deallocate();
+        return &this;
     }
 
     /***************************
@@ -124,9 +126,10 @@ struct Context(R)
 
         counter = 0;
         ifstack.initialize();
-        xc = ' ';
+        stack.xc = ' ';
         lastloc = lastloc.init;
         uselastloc = false;
+        stack.psource = null;
     }
 
     static Context* getContext()
@@ -237,22 +240,22 @@ struct Context(R)
 
     @property bool empty()
     {
-        return xc == xc.init;
+        return stack.xc == stack.xc.init;
     }
 
     @property uchar front()
     {
-        return xc;
+        return stack.xc;
     }
 
     void popFront()
     {
         while (1)
         {
-            auto s = psource;
+            auto s = stack.psource;
             if (s.texti < s.lineBuffer.length)
             {
-                xc = s.lineBuffer[s.texti];
+                stack.xc = s.lineBuffer[s.texti];
                 ++s.texti;
             }
             else
@@ -266,29 +269,29 @@ struct Context(R)
                 s = pop();
                 if (s)
                     continue;
-                xc = xc.init;
+                stack.xc = stack.xc.init;
                 break;
             }
-            expanded.put(xc);
+            expanded.put(stack.xc);
             break;
         }
     }
 
     uchar[] restOfLine()
     {
-        auto s = psource;
+        auto s = stack.psource;
         auto result = s.lineBuffer[s.texti .. s.lineBuffer.length];
         s.texti = cast(uint)s.lineBuffer.length;
-        xc = '\n';
+        stack.xc = '\n';
         return result;
     }
 
     void unget()
     {
-        if (psource && psource.texti)
+        if (stack.psource && stack.psource.texti)
         {
-            --psource.texti;
-            assert(psource.lineBuffer[psource.texti] == xc);
+            --stack.psource.texti;
+            assert(stack.psource.lineBuffer[stack.psource.texti] == stack.xc);
         }
     }
 
@@ -326,7 +329,7 @@ struct Context(R)
 
     Source* push()
     {
-        auto s = psource;
+        auto s = stack.psource;
         if (s)
         {
             s = s.next;
@@ -334,17 +337,25 @@ struct Context(R)
             {
                 // Ran out of space, allocate another chunk
                 auto sources2 = new Source[16];
-                Source.initialize(sources2, psource, &psource.next);
-                s = psource.next;
+                Source.initialize(sources2, stack.psource, &stack.psource.next);
+                s = stack.psource.next;
                 assert(s);
             }
         }
         else
-            s = sources.ptr;
+        {
+            if (!stack.psourceRoot)
+            {
+                auto sources2 = new Source[16];
+                Source.initialize(sources2, stack.psource, &stack.psource);
+                stack.psourceRoot = sources2.ptr;
+            }
+            s = stack.psourceRoot;
+        }
         s.isFile = false;
         s.isExpanded = false;
         s.seenTokens = false;
-        psource = s;
+        stack.psource = s;
 
         debug (ContextStats)
         {
@@ -358,7 +369,7 @@ struct Context(R)
 
     Source* pop()
     {
-        auto s = psource;
+        auto s = stack.psource;
         if (s.isFile)
         {
             // Back up and find previous file; null if none
@@ -382,12 +393,12 @@ struct Context(R)
                 s.loc.srcFile.includeGuard = s.includeGuard;
             }
         }
-        psource = psource.prev;
+        stack.psource = stack.psource.prev;
         debug (ContextStats)
         {
             --sourcei;
         }
-        return psource;
+        return stack.psource;
     }
 
     int nestLevel()
@@ -403,9 +414,9 @@ struct Context(R)
         return level;
     }
 
-    bool isExpanded() { return psource.isExpanded; }
+    bool isExpanded() { return stack.psource.isExpanded; }
 
-    void setExpanded() { psource.isExpanded = true; }
+    void setExpanded() { stack.psource.isExpanded = true; }
 
     /***************************
      * Return text associated with predefined macro.
@@ -530,6 +541,87 @@ R readLine(R, S)(R r, ref S s)
     return r;
 }
 
+
+/*************************************************
+ * Stack of Source's
+ */
+
+struct SourceStack
+{
+    Source* psource;
+    uchar xc = ' ';
+    SourceStack* prev;
+    Source* psourceRoot;
+
+    __gshared SourceStack* _freelist;
+
+    static SourceStack* allocate()
+    {
+        auto st = _freelist;
+        if (st)
+        {
+            _freelist = st.prev;
+        }
+        else
+        {
+            st = cast(SourceStack*)malloc(SourceStack.sizeof);
+            assert(st);
+            *st = SourceStack.init;
+        }
+        return st;
+    }
+
+    void deallocate()
+    {
+        prev = _freelist;
+        _freelist = &this;
+    }
+
+    @property bool empty()
+    {
+        return xc == xc.init;
+    }
+
+    @property uchar front()
+    {
+        return xc;
+    }
+
+    void popFront()
+    {
+        while (1)
+        {
+            auto s = psource;
+            if (s.texti < s.lineBuffer.length)
+            {
+                xc = s.lineBuffer[s.texti];
+                ++s.texti;
+            }
+            else
+            {
+                if (s.isFile && !s.input.empty)
+                {
+                    s.readLine();
+                    continue;
+                }
+                ++s.loc.lineNumber;
+                s = pop();
+                if (s)
+                    continue;
+                xc = xc.init;
+                break;
+            }
+            break;
+        }
+    }
+
+    Source* pop()
+    {
+        assert(!psource.isFile);
+        psource = psource.prev;
+        return psource;
+    }
+}
 
 /******************************************
  * Source text.

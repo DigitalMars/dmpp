@@ -83,6 +83,7 @@ else
 
         context.globalFinish();
 
+        exit(EXIT_SUCCESS);     // this prevents the collector from running on exit
         return EXIT_SUCCESS;
     }
 }

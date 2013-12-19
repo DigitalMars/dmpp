@@ -1235,7 +1235,7 @@ private R macroScanArgument(R, T)(R r1, bool va_args, ref T outbuf)
 {
     alias Unqual!(ElementEncodingType!R) E;
 
-    enum bool isContext = __traits(compiles, r1.prev);
+    enum bool isContext = __traits(compiles, r1.stack.prev);
 
     static if (isContext)
     {
@@ -1243,18 +1243,18 @@ private R macroScanArgument(R, T)(R r1, bool va_args, ref T outbuf)
         {
             @property bool empty()
             {
-                return r1.empty && r1.prev && r1.prev.empty;
+                return r1.empty && r1.stack.prev && r1.stack.prev.empty;
             }
 
             @property E front()
             {
-                return r1.empty ? cast(E)r1.prev.front : cast(E)r1.front;
+                return r1.empty ? cast(E)r1.stack.prev.front : cast(E)r1.front;
             }
 
             void popFront()
             {
                 if (r1.empty)
-                    r1.prev.popFront();
+                    r1.stack.prev.popFront();
                 else
                     r1.popFront();
             }
