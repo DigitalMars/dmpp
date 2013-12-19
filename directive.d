@@ -66,6 +66,9 @@ void lexMacroParameters(R)(ref R r, out bool variadic, out ustring[] parameters)
                         continue;
 
                     case TOK.dotdotdot:
+                        err_fatal("comma must precede ...");
+                        return;
+
                     case TOK.rparen:
                         continue;
 
