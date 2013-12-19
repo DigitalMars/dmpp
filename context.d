@@ -393,19 +393,25 @@ struct Context(R)
      */
     ustring predefined(Id* m)
     {
+        Loc loc;
         auto s = currentSourceFile();
-        if (!s)
+        if (s)
+            loc = s.loc;
+        else
+            loc = lastloc;
+        if (!loc.srcFile)
             return null;
+
         uint n;
 
         switch (m.flags & (Id.IDlinnum | Id.IDfile | Id.IDcounter))
         {
             case Id.IDlinnum:
-                n = s.loc.lineNumber;
+                n = loc.lineNumber;
                 break;
 
             case Id.IDfile:
-                return cast(ustring)('"' ~ s.loc.srcFile.filename ~ '"');
+                return cast(ustring)('"' ~ loc.srcFile.filename ~ '"');
 
             case Id.IDcounter:
                 n = counter++;

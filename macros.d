@@ -748,6 +748,7 @@ private void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
     ctx.expanded.off();
 
     auto rc = Context(ctx.params);
+    rc.psourceFile = ctx.psourceFile;   // for __FILE__ and __LINE__
 
     rc.expanded.off();
     rc.push(text);
