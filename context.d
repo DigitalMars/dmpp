@@ -431,8 +431,9 @@ struct Context(R)
      * Search for file along paths[]
      * Output:
      *  pathIndex       index of where file was found
+     *  isSystem        set to true if file is found in -isystem paths
      */
-    SrcFile* searchForFile(bool includeNext, bool curdir, bool isSystem, const(char)[] s, out int pathIndex)
+    SrcFile* searchForFile(bool includeNext, bool curdir, ref bool isSystem, const(char)[] s, out int pathIndex)
     {
         //writefln("searchForFile(includeNext = %s, curdir = %s, isSystem = %s, s = '%s')", includeNext, curdir, isSystem, s);
         string currentPath;
@@ -459,6 +460,9 @@ struct Context(R)
         auto sf = fileSearch(cast(string)s, paths, pathIndex, pathIndex, currentPath);
         if (!sf)
             return null;
+
+        if (pathIndex >= sysIndex)
+            isSystem = true;
 
         if (!sf.cachedRead)
         {
