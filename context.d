@@ -461,7 +461,7 @@ struct Context(R)
         if (!sf)
             return null;
 
-        writefln("path = %d sys = %d length = %d", pathIndex, sysIndex, paths.length);
+        //writefln("path = %d sys = %d length = %d", pathIndex, sysIndex, paths.length);
         if (pathIndex >= sysIndex && pathIndex < paths.length)
             isSystem = true;
 
