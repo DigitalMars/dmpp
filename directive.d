@@ -460,6 +460,7 @@ bool parseDirective(R)(ref R r)
                     }
 
                     r.src.expanded.on();
+                    r.src.expanded.put(r.src.front);
                     return true;
                 }
 
