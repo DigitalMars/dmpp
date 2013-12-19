@@ -613,7 +613,7 @@ struct Lexer(R) if (isInputRange!R)
                                             if (space)
                                                 src.expanded.put(space);
                                             if (c)
-                                                src.push(c);
+                                                src.expanded.put(c);
                                             front = TOK.identifier;
                                             return;
                                     }
