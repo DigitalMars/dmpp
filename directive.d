@@ -368,6 +368,7 @@ bool parseDirective(R)(ref R r)
                         err_fatal("redefinition of macro %s", cast(string)macid);
                     }
                     r.src.expanded.on();
+                    r.src.expanded.put(r.src.front);
                     r.front = TOK.eol;
                     return true;
                 }
@@ -395,6 +396,7 @@ bool parseDirective(R)(ref R r)
                         err_fatal("end of line expected following #undef");
 
                     r.src.expanded.on();
+                    r.src.expanded.put(r.src.front);
                     return true;
                 }
 
@@ -426,6 +428,7 @@ bool parseDirective(R)(ref R r)
                     }
 
                     r.src.expanded.on();
+                    r.src.expanded.put(r.src.front);
                     return true;
                 }
 
