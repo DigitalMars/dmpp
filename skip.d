@@ -16,17 +16,9 @@ import std.stdio;
 import core.stdc.stdio;
 
 import macros : ESC;
+import main : err_fatal;
 import ranges;
 
-void defaultError(T...)(T args)
-{
-    import std.stdio;
-    import core.stdc.stdlib;
-
-    stderr.write("Error: ");
-    stderr.writefln(args);
-    exit(EXIT_FAILURE);
-}
 
 version (unittest)
 {
@@ -42,7 +34,7 @@ version (unittest)
  *      range starting at beginning of next line
  */
 
-R skipCppComment(alias error = defaultError, R)(R r) if (isInputRange!R)
+R skipCppComment(alias error = err_fatal, R)(R r) if (isInputRange!R)
 {
     while (!r.empty)
     {
@@ -73,7 +65,7 @@ unittest
  *      range starting after closing * /
  */
 
-R skipCComment(alias error = defaultError, R)(R r) if (isInputRange!R)
+R skipCComment(alias error = err_fatal, R)(R r) if (isInputRange!R)
 {
     bool star;
     while (!r.empty)
@@ -113,7 +105,7 @@ unittest
  *      range starting after closing '
  */
 
-R skipCharacterLiteral(alias error = defaultError, R, S)(R r, ref S s)
+R skipCharacterLiteral(alias error = err_fatal, R, S)(R r, ref S s)
         if (isInputRange!R && isOutputRange!(S,ElementEncodingType!R))
 {
     bool slash;
@@ -165,7 +157,7 @@ unittest
  *      range starting after closing "
  */
 
-R skipStringLiteral(alias error = defaultError, R, S)(R r, ref S s)
+R skipStringLiteral(alias error = err_fatal, R, S)(R r, ref S s)
         if (isInputRange!R && isOutputRange!(S,ElementEncodingType!R))
 {
     bool slash;
@@ -218,7 +210,7 @@ unittest
  *      range starting after closing "
  */
 
-R skipRawStringLiteral(alias error = defaultError, R, S)(R r, ref S s)
+R skipRawStringLiteral(alias error = err_fatal, R, S)(R r, ref S s)
         if (isInputRange!R && isOutputRange!(S,ElementEncodingType!R))
 {
     enum RAW { start, string, end }
@@ -319,7 +311,7 @@ unittest
  *      range starting at first character following whitespace
  */
 
-R skipWhitespace(alias error = defaultError, R)(R r) if (isInputRange!R)
+R skipWhitespace(alias error = err_fatal, R)(R r) if (isInputRange!R)
 {
     alias Unqual!(ElementType!R) E;
 
