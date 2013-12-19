@@ -143,5 +143,13 @@ unittest
     assert(textbuf[3] == 'b');
     textbuf.pop();
     assert(textbuf[0..textbuf.length] == "axab");
+    textbuf.setLength(3);
+    assert(textbuf[0..textbuf.length] == "axa");
+    assert(textbuf.last() == 'a');
+    assert(textbuf[1..3] == "xa");
+    textbuf.put(cast(dchar)'z');
+    assert(textbuf[] == "axaz");
+    textbuf.initialize();
+    assert(textbuf.length == 0);
     textbuf.free();
 }
