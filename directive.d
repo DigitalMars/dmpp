@@ -788,9 +788,12 @@ void skipFalseCond(R)(ref R r)
                                 if (starti == r.src.ifstack.length())
                                 {
                                     // Skip the rest of the line
-                                    r.src.restOfLine();
-                                    r.popFront();
+                                    r.popFrontNoExpand();
+                                    if (r.front != TOK.eol)
+                                        err_fatal("end of line expected after #endif");
                                     r.src.expanded.on();
+                                    r.src.expanded.put(r.src.front);
+                                    r.popFront();
                                     return;
                                 }
                                 break;
