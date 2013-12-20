@@ -153,6 +153,14 @@ struct Expanded(R)
         if (!noexpand && lineBuffer.length)
             lineBuffer.pop();
     }
+
+    /****************************
+     * Erase current unemitted line.
+     */
+    void eraseLine()
+    {
+        lineBuffer.initialize();
+    }
 }
 
 

@@ -30,7 +30,8 @@ bool logging;
 
 bool isIdentifierStart(uchar c)
 {
-    return isAlpha(c) || c == '_';
+    return (c >= 'A' && c <= 'z' &&
+        (c >= 'a' || c <= 'Z' || c == '_'));
 }
 
 bool isIdentifierChar(uchar c)

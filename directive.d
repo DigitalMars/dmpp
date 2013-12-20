@@ -248,7 +248,7 @@ bool parseDirective(R)(ref R r)
     //writefln("parseDirective() seenTokens = %s", r.src.currentSourceFile().seenTokens);
 
     // Ensure the '#' is left-justified in the output
-    r.src.expanded.lineBuffer.initialize();
+    r.src.expanded.eraseLine();
     r.src.expanded.put('#');
     r.src.expanded.put(cast(uchar)r.src.front);
 
@@ -273,7 +273,7 @@ bool parseDirective(R)(ref R r)
                     // #line directive
                     // Turn off expanded output so this line is not emitted
                     r.src.expanded.off();
-                    r.src.expanded.lineBuffer.initialize();
+                    r.src.expanded.eraseLine();
 
                     linemarker = false;
                     r.popFront();
@@ -299,7 +299,7 @@ bool parseDirective(R)(ref R r)
 
                         // Turn off expanded output so this line is not emitted
                         r.src.expanded.off();
-                        r.src.expanded.lineBuffer.initialize();
+                        r.src.expanded.eraseLine();
 
                         r.popFront();
                         if (r.front != TOK.eol)
@@ -316,7 +316,7 @@ bool parseDirective(R)(ref R r)
                         {
                             // Turn off expanded output so this line is not emitted
                             r.src.expanded.off();
-                            r.src.expanded.lineBuffer.initialize();
+                            r.src.expanded.eraseLine();
 
                             r.popFront();
                             if (r.front != TOK.eol)
@@ -343,7 +343,7 @@ bool parseDirective(R)(ref R r)
                 {
                     // Turn off expanded output so this line is not emitted
                     r.src.expanded.off();
-                    r.src.expanded.lineBuffer.initialize();
+                    r.src.expanded.eraseLine();
 
                     r.popFrontNoExpand();
                     assert(!r.empty);
@@ -393,7 +393,7 @@ bool parseDirective(R)(ref R r)
                 {
                     // Turn off expanded output so this line is not emitted
                     r.src.expanded.off();
-                    r.src.expanded.lineBuffer.initialize();
+                    r.src.expanded.eraseLine();
 
                     r.popFrontNoExpand();
                     assert(!r.empty);
@@ -425,7 +425,7 @@ bool parseDirective(R)(ref R r)
                 {
                     // Turn off expanded output so this line is not emitted
                     r.src.expanded.off();
-                    r.src.expanded.lineBuffer.initialize();
+                    r.src.expanded.eraseLine();
 
                     r.popFront();
                     assert(!r.empty);
@@ -452,7 +452,7 @@ bool parseDirective(R)(ref R r)
                 {
                     // Turn off expanded output so this line is not emitted
                     r.src.expanded.off();
-                    r.src.expanded.lineBuffer.initialize();
+                    r.src.expanded.eraseLine();
 
                     r.popFrontNoExpand();
                     assert(!r.empty);
@@ -492,7 +492,7 @@ bool parseDirective(R)(ref R r)
 
                     // Turn off expanded output so this line is not emitted
                     r.src.expanded.off();
-                    r.src.expanded.lineBuffer.initialize();
+                    r.src.expanded.eraseLine();
 
                     r.popFrontNoExpand();
                     assert(!r.empty);
@@ -520,7 +520,7 @@ bool parseDirective(R)(ref R r)
                 case "else":
                     // Turn off expanded output so this line is not emitted
                     r.src.expanded.off();
-                    r.src.expanded.lineBuffer.initialize();
+                    r.src.expanded.eraseLine();
                     r.popFront();
                     if (r.front != TOK.eol)
                         err_fatal("end of line expected after #else");
@@ -537,7 +537,7 @@ bool parseDirective(R)(ref R r)
                 case "elif":
                     // Turn off expanded output so this line is not emitted
                     r.src.expanded.off();
-                    r.src.expanded.lineBuffer.initialize();
+                    r.src.expanded.eraseLine();
                     while (!r.empty)
                     {
                         r.popFront();
@@ -578,7 +578,7 @@ bool parseDirective(R)(ref R r)
                     }
                     // Turn off expanded output so this line is not emitted
                     r.src.expanded.off();
-                    r.src.expanded.lineBuffer.initialize();
+                    r.src.expanded.eraseLine();
                     r.popFront();
                     if (r.front != TOK.eol)
                         err_fatal("end of line expected after #endif");
@@ -601,7 +601,7 @@ bool parseDirective(R)(ref R r)
 
                     // Turn off expanded output so this line is not emitted
                     r.src.expanded.off();
-                    r.src.expanded.lineBuffer.initialize();
+                    r.src.expanded.eraseLine();
 
                     uchar[60] tmpbuf = void;
                     auto stringbuf = Textbuf!uchar(tmpbuf);
