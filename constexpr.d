@@ -28,7 +28,12 @@ private:
 
 PPnumber Primary(Lexer)(ref Lexer r)
 {
-    enum bool isContext = __traits(compiles, r.src.expanded);
+
+    // This line only works with 2.064 and later
+    //enum bool isContext = __traits(compiles, r.src.expanded);
+
+    // Use for 2.063 and later
+    enum bool isContext = is(typeof(r.src.expanded));
 
     switch (r.front)
     {
@@ -46,7 +51,9 @@ PPnumber Primary(Lexer)(ref Lexer r)
                         r.popFrontNoExpand();
                     }
                     if (r.front != TOK.identifier)
+                    {
                         err_fatal("identifier expected after 'defined'");
+                    }
                     else
                     {
                         PPnumber i;
@@ -75,7 +82,9 @@ PPnumber Primary(Lexer)(ref Lexer r)
                         r.popFront();
                     }
                     if (r.front != TOK.identifier)
+                    {
                         err_fatal("identifier expected after 'defined'");
+                    }
                     else
                     {
                         PPnumber i;

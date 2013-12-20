@@ -127,6 +127,7 @@ struct Expanded(R)
 
     void put(ustring s)
     {
+//writefln("expanded.put('%s')", cast(string)s);
         foreach (uchar c; s)
             put(c);
     }

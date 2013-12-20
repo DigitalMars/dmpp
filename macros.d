@@ -922,7 +922,7 @@ void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
 
                         /* A temporary buffer to contain the argument strings
                          */
-                        uchar[400] tmpargbuf = void;
+                        uchar[100] tmpargbuf = void;
                         auto argbuffer = Textbuf!(uchar,"arg")(tmpargbuf);
 
                         /* A temporary buffer to contain the args[]
