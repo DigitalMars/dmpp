@@ -642,7 +642,16 @@ struct Lexer(R) if (isInputRange!R)
                             //writefln("expanded: '%s'", expbuffer[]);
 
                             rescanbuffer.initialize();
-                            macroRescan!(typeof(*src))(m, expbuffer[], rescanbuffer);
+
+                            m.flags |= Id.IDinuse;
+                            macroExpand!(typeof(*src))(expbuffer[], rescanbuffer);
+                            m.flags &= ~Id.IDinuse;
+
+                            auto rs = rescanbuffer[];
+                            rs = rs.trimWhiteSpace();
+
+                            //macroRescan!(typeof(*src))(m, expbuffer[], rescanbuffer);
+
                             //writefln("rescanned: '%s'", rescanbuffer[]);
 
                             /*
@@ -654,7 +663,8 @@ struct Lexer(R) if (isInputRange!R)
                                 src.push(ESC.brk);
                             }
 
-                            src.push(rescanbuffer[]);
+                            src.push(rs.empty ? cast(ustring)("" ~ ESC.space) : rs);
+                            //src.push(rescanbuffer[]);
                             src.setExpanded();
                             src.expanded.on();
                             src.expanded.put(ESC.brk);

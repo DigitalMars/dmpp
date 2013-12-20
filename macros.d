@@ -240,7 +240,7 @@ unittest
  *      modified input
  */
 
-private uchar[] trimWhiteSpace(uchar[] text)
+uchar[] trimWhiteSpace(uchar[] text)
 {
     // Remove leading
     size_t fronti;
@@ -737,7 +737,7 @@ void macroExpandedText(Context, R)(Id* m, ustring[] args, ref R buffer)
 
 //debug=MacroExpand;
 
-private void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
+void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
 {
     debug (MacroExpand)
         writefln("+macroExpand(text = '%s')", cast(string)text);
@@ -751,7 +751,6 @@ private void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
 
     r.push(text);
     r.popFront();
-
 
   Louter:
     while (!r.empty)
@@ -840,14 +839,11 @@ private void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
                 {
                     auto expanded = r.isExpanded();
                     size_t len = outbuf.length;
-//writefln("\t1outbuf[] = '%s'", cast(string)outbuf[]);
                     r = r.inIdentifier(outbuf);
-//writefln("\t2outbuf[] = '%s'", cast(string)outbuf[]);
                     debug (MacroExpand)
                         writefln("\tident[] = '%s'", outbuf[len .. outbuf.length]);
                     if (expanded && !r.empty && r.isExpanded())
                     {
-//writeln("\t3continue");
                         continue;
                     }
                     auto id = outbuf[len .. outbuf.length];
@@ -926,13 +922,13 @@ private void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
 
                         /* A temporary buffer to contain the argument strings
                          */
-                        uchar[196] tmpargbuf = void;
-                        auto argbuffer = Textbuf!uchar(tmpargbuf);
+                        uchar[400] tmpargbuf = void;
+                        auto argbuffer = Textbuf!(uchar,"arg")(tmpargbuf);
 
                         /* A temporary buffer to contain the args[]
                          */
-                        ustring[16] tmpargsbuf = void;
-                        auto argsbuffer = Textbuf!(ustring)(tmpargsbuf);
+                        ustring[64] tmpargsbuf = void;
+                        auto argsbuffer = Textbuf!(ustring,"rgs")(tmpargsbuf);
 
                         if (m.flags & Id.IDfunctionLike)
                         {
@@ -990,40 +986,37 @@ private void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
                                     default:
                                         if (space)
                                             outbuf.put(space);
-//writefln("\t6test '%c'", cast(char)c);
-                                        //outbuf.put(c);
                                         continue Louter;
                                 }
                                 break;
                             }
 
-//if (m.name == "BOOST_PP_CAT") logging = false;
                             //writefln("macroScanArguments('%s')", cast(string)m.name);
                             r = r.macroScanArguments(m.parameters.length,
                                     !!(m.flags & Id.IDdotdotdot),
                                      argsbuffer, argbuffer);
                         }
 
-//writefln("\t3outbuf[] = '%s'", cast(string)outbuf[]);
                         outbuf.setLength(len);
                         auto xcnext = r.front;
 
                         if (!r.empty)
                             r.unget();
 
-//writefln("\t4outbuf[] = '%s'", cast(string)outbuf[]);
                         uchar[278] tmpbuf2 = void;
-                        auto expbuffer = Textbuf!uchar(tmpbuf2);
+                        auto expbuffer = Textbuf!(uchar,"exp")(tmpbuf2);
 
                         uchar[131] tmpbuf3 = void;
-                        auto rescanbuffer = Textbuf!uchar(tmpbuf3);
+                        auto rescanbuffer = Textbuf!(uchar,"rsc")(tmpbuf3);
 
                         macroExpandedText!Context(m, argsbuffer[], expbuffer);
-//if (logging)
-// writefln("\texpanded  = '%s'", cast(string)expbuffer[]);
-                        macroRescan!Context(m, expbuffer[], rescanbuffer);
-//if (logging)
-// writefln("\trescanned = '%s'", cast(string)rescanbuffer[]);
+
+                        m.flags |= Id.IDinuse;
+                        macroExpand!Context(expbuffer[], rescanbuffer);
+                        m.flags &= ~Id.IDinuse;
+
+                        auto rs = rescanbuffer[];
+                        rs = rs.trimWhiteSpace();
 
                         /*
                          * Insert break if necessary to prevent
@@ -1034,7 +1027,7 @@ private void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
                             r.push(ESC.brk);
                         }
 
-                        r.push(rescanbuffer[]);
+                        r.push(rs.empty ? cast(ustring)("" ~ ESC.space) : rs);
                         r.setExpanded();
                         r.push(ESC.brk);
                         r.popFront();
@@ -1079,7 +1072,7 @@ void macroRescan(Context, R)(Id* m, const(uchar)[] text, ref R outbuf)
     m.flags |= Id.IDinuse;
 
     uchar[133] tmpbuf = void;
-    auto expbuf = Textbuf!uchar(tmpbuf);
+    auto expbuf = Textbuf!(uchar,"rs2")(tmpbuf);
 
     macroExpand!Context(text, expbuf);
     auto r = expbuf[];
@@ -1091,9 +1084,7 @@ void macroRescan(Context, R)(Id* m, const(uchar)[] text, ref R outbuf)
         outbuf.put(ESC.space);
     else
     {
-//writefln("\t\t\txoutbuf.put('%s' '%s')", cast(string)outbuf[], cast(string)r);
         outbuf.put(r);
-//writefln("\t\t\tyoutbuf.put('%s')", cast(string)outbuf[]);
     }
 
     expbuf.free();
@@ -1120,7 +1111,7 @@ R macroScanArguments(R, S, T)(R r, size_t nparameters, bool variadic, ref S args
      * since argsbuffer[] may get reallocated
      */
     uint[16] tmpargs = void;
-    auto argsindexbuffer = Textbuf!uint(tmpargs);
+    auto argsindexbuffer = Textbuf!(uint,"scn")(tmpargs);
 
     bool va_args = variadic && (1 == nparameters);
 
