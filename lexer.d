@@ -650,8 +650,6 @@ struct Lexer(R) if (isInputRange!R)
                             auto rs = rescanbuffer[];
                             rs = rs.trimWhiteSpace();
 
-                            //macroRescan!(typeof(*src))(m, expbuffer[], rescanbuffer);
-
                             //writefln("rescanned: '%s'", rescanbuffer[]);
 
                             /*

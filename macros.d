@@ -1061,36 +1061,6 @@ Ldone:
 }
 
 
-/***********************************************
- * Rescan already expanded macro text for more substitutions.
- * Output:
- *      result written to outbuf
- */
-
-void macroRescan(Context, R)(Id* m, const(uchar)[] text, ref R outbuf)
-{
-    m.flags |= Id.IDinuse;
-
-    uchar[133] tmpbuf = void;
-    auto expbuf = Textbuf!(uchar,"rs2")(tmpbuf);
-
-    macroExpand!Context(text, expbuf);
-    auto r = expbuf[];
-    r = r.trimWhiteSpace();
-
-    m.flags &= ~Id.IDinuse;
-
-    if (r.empty)
-        outbuf.put(ESC.space);
-    else
-    {
-        outbuf.put(r);
-    }
-
-    expbuf.free();
-}
-
-
 /********************************************
  * Read in actual arguments for function-like macro instantiation.
  * Input:
