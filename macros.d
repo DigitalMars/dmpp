@@ -70,7 +70,7 @@ ustring macroReplacementList(R)(ref R text, bool objectLike, ustring[] parameter
         return cast(ustring)"";
 
     E[1000] tmpbuf = void;
-    auto outbuf = Textbuf!uchar(tmpbuf);
+    auto outbuf = Textbuf!(uchar, "mrl")(tmpbuf);
     outbuf.put(0);
 
     while (1)
@@ -688,8 +688,8 @@ void macroExpandedText(Context, R)(Id* m, ustring[] args, ref R buffer)
             {
                 //writefln("\t\tbefore '%s'", cast(string)a);
 
-                uchar[128] tmpbuf = void;
-                auto expbuf = Textbuf!uchar(tmpbuf);
+                uchar[512] tmpbuf = void;
+                auto expbuf = Textbuf!(uchar,"met")(tmpbuf);
                 assert(expbuf.length == 0);
 
                 macroExpand!Context(a, expbuf);
@@ -926,7 +926,7 @@ private void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
 
                         /* A temporary buffer to contain the argument strings
                          */
-                        uchar[64] tmpargbuf = void;
+                        uchar[196] tmpargbuf = void;
                         auto argbuffer = Textbuf!uchar(tmpargbuf);
 
                         /* A temporary buffer to contain the args[]
@@ -1012,10 +1012,10 @@ private void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
                             r.unget();
 
 //writefln("\t4outbuf[] = '%s'", cast(string)outbuf[]);
-                        uchar[128] tmpbuf2 = void;
+                        uchar[278] tmpbuf2 = void;
                         auto expbuffer = Textbuf!uchar(tmpbuf2);
 
-                        uchar[128] tmpbuf3 = void;
+                        uchar[131] tmpbuf3 = void;
                         auto rescanbuffer = Textbuf!uchar(tmpbuf3);
 
                         macroExpandedText!Context(m, argsbuffer[], expbuffer);
@@ -1078,7 +1078,7 @@ void macroRescan(Context, R)(Id* m, const(uchar)[] text, ref R outbuf)
 {
     m.flags |= Id.IDinuse;
 
-    uchar[128] tmpbuf = void;
+    uchar[133] tmpbuf = void;
     auto expbuf = Textbuf!uchar(tmpbuf);
 
     macroExpand!Context(text, expbuf);

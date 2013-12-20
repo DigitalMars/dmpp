@@ -21,7 +21,7 @@ import std.stdio;
 
 //debug=Textbuf;
 
-struct Textbuf(T)
+struct Textbuf(T, string id = null)
 {
     this(T[] buf)
     {
@@ -112,7 +112,7 @@ struct Textbuf(T)
 
     void resize(size_t newsize)
     {
-        //writefln("oldsize %s newsize %s", buf.length, newsize);
+        //writefln("%s: oldsize %s newsize %s", id, buf.length, newsize);
         void* p;
         if (resized)
         {

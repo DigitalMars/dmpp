@@ -25,7 +25,7 @@ struct Expanded(R)
 
     // Expanded output file
     uchar[1000] tmpbuf2 = void;
-    Textbuf!uchar lineBuffer = void;
+    Textbuf!(uchar,"exp") lineBuffer = void;
 
     R* foutr;
 
@@ -38,7 +38,7 @@ struct Expanded(R)
     void initialize(Context!R* ctx)
     {
         this.ctx = ctx;
-        lineBuffer = Textbuf!uchar(tmpbuf2);
+        lineBuffer = Textbuf!(uchar,"exp")(tmpbuf2);
     }
 
     void start(R* foutr)

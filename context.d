@@ -70,8 +70,8 @@ struct Context(R)
     //Context* prev;                      // previous one in stack of these
 
     // Stack of #if/#else/#endif nesting
-    ubyte[8] tmpbuf = void;
-    Textbuf!ubyte ifstack;
+    ubyte[64] tmpbuf = void;
+    Textbuf!(ubyte,"ifs") ifstack;
 
 
     /******
@@ -86,7 +86,7 @@ struct Context(R)
         combineSearchPaths(params.includes, params.sysincludes, pathsx, sysIndex);
         paths = pathsx;         // workaround for Bugzilla 11743
 
-        ifstack = Textbuf!ubyte(tmpbuf);
+        ifstack = Textbuf!(ubyte,"ifs")(tmpbuf);
         ifstack.initialize();
         expanded.initialize(&this);
         setContext();
@@ -642,7 +642,7 @@ struct Source
     int ifstacki;       // index into ifstack[]
 
     uchar[257] tmpbuf = void;
-    Textbuf!uchar lineBuffer = void;
+    Textbuf!(uchar,"src") lineBuffer = void;
 
     uint texti;         // index of current position in lineBuffer[]
 
@@ -666,7 +666,7 @@ struct Source
             pNext = &src.next;
             src.next = null;
 
-            src.lineBuffer = Textbuf!uchar(src.tmpbuf);
+            src.lineBuffer = Textbuf!(uchar,"src")(src.tmpbuf);
         }
     }
 

@@ -96,9 +96,21 @@ struct Lexer(R) if (isInputRange!R)
 
     StaticArrayBuffer!(E, 1024) idbuf = void;
 
-    E[16] tmpbuf;
-    Textbuf!E stringbuf;
+    E[40] tmpbuf;
+    Textbuf!(E,"str") stringbuf;
     bool stringLiteral;
+
+    uchar[128] tmpbuf3 = void;
+    Textbuf!(uchar,"lrs") rescanbuffer;
+
+    uchar[128] tmpbuf2 = void;
+    Textbuf!(uchar,"lex") expbuffer;
+
+    uchar[128] tmpargbuf = void;
+    Textbuf!(uchar,"lar") argbuffer; // temporary buffer to contain the argument strings
+
+    ustring[16] tmpargsbuf = void;
+    Textbuf!(ustring,"lgs") argsbuffer;   // temporary buffer to contain the args[]
 
     bool noMacroExpand;
     bool noExpand;
@@ -537,15 +549,8 @@ struct Lexer(R) if (isInputRange!R)
                                 continue;
                             }
 
-                            /* A temporary buffer to contain the argument strings
-                             */
-                            uchar[64] tmpargbuf = void;
-                            auto argbuffer = Textbuf!uchar(tmpargbuf);
-
-                            /* A temporary buffer to contain the args[]
-                             */
-                            ustring[16] tmpargsbuf = void;
-                            auto argsbuffer = Textbuf!(ustring)(tmpargsbuf);
+                            argbuffer.initialize();
+                            argsbuffer.initialize();
 
                             if (m.flags & Id.IDfunctionLike)
                             {
@@ -632,14 +637,11 @@ struct Lexer(R) if (isInputRange!R)
                             if (!src.empty)
                                 src.unget();
 
-                            uchar[128] tmpbuf = void;
-                            auto expbuffer = Textbuf!uchar(tmpbuf);
-
-                            uchar[128] tmpbuf3 = void;
-                            auto rescanbuffer = Textbuf!uchar(tmpbuf3);
-
+                            expbuffer.initialize();
                             macroExpandedText!(typeof(*src))(m, argsbuffer[], expbuffer);
                             //writefln("expanded: '%s'", expbuffer[]);
+
+                            rescanbuffer.initialize();
                             macroRescan!(typeof(*src))(m, expbuffer[], rescanbuffer);
                             //writefln("rescanned: '%s'", rescanbuffer[]);
 
@@ -658,10 +660,6 @@ struct Lexer(R) if (isInputRange!R)
                             src.expanded.put(ESC.brk);
                             src.popFront();
 
-                            rescanbuffer.free();
-                            expbuffer.free();
-                            argsbuffer.free();
-                            argbuffer.free();
                             continue;
                         }
 
@@ -815,7 +813,14 @@ auto createLexer(R)(R r)
 {
     Lexer!R lexer;
     lexer.src = r;
-    lexer.stringbuf = Textbuf!(lexer.E)(lexer.tmpbuf);
+
+    // Temp buffers
+    lexer.stringbuf    = Textbuf!(lexer.E,"str")(lexer.tmpbuf);
+    lexer.rescanbuffer = Textbuf!(uchar,"lrs")(lexer.tmpbuf3);
+    lexer.expbuffer    = Textbuf!(uchar,"lex")(lexer.tmpbuf2);
+    lexer.argbuffer    = Textbuf!(uchar,"lar")(lexer.tmpargbuf);
+    lexer.argsbuffer   = Textbuf!(ustring,"lgs")(lexer.tmpargsbuf);
+
     lexer.popFront();   // 'prime' the pump
     return lexer;
 }
