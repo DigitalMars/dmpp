@@ -1242,28 +1242,36 @@ private R macroScanArgument(R, T)(R r1, bool va_args, ref T outbuf)
 
     static if (isContext)
     {
-        struct Chain
+        static struct Chain
         {
+            R r1;
+
             @property bool empty()
             {
-                return r1.empty && r1.stack.prev && r1.stack.prev.empty;
+                bool b = r1.empty && r1.stack.prev && r1.stack.prev.empty;
+                return b;
             }
 
             @property E front()
             {
-                return r1.empty ? cast(E)r1.stack.prev.front : cast(E)r1.front;
+                E c = r1.empty && r1.stack.prev ? cast(E)r1.stack.prev.front : cast(E)r1.front;
+                return c;
             }
 
             void popFront()
             {
                 if (r1.empty)
-                    r1.stack.prev.popFront();
+                {
+                    if (r1.stack.prev)
+                        r1.stack.prev.popFront();
+                }
                 else
                     r1.popFront();
             }
         }
 
         Chain r;
+        r.r1 = r1;
     }
     else
         alias r1 r;

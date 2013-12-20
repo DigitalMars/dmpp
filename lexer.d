@@ -652,7 +652,7 @@ struct Lexer(R) if (isInputRange!R)
                                 src.push(ESC.brk);
                             }
 
-                            src.push(rescanbuffer[].dup);
+                            src.push(rescanbuffer[]);
                             src.setExpanded();
                             src.expanded.on();
                             src.expanded.put(ESC.brk);

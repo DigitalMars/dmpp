@@ -17,6 +17,7 @@ import std.stdio;
 import std.string;
 
 import main;
+import textbuf;
 
 /*********************************
  * Things to know about source files.
@@ -44,12 +45,12 @@ struct SrcFile
      */
     static SrcFile* lookup(const(char)[] filename, bool tmp = false)
     {
-        auto p = filename in table;
+        auto p = cast(string)filename in table;
         if (!p)
         {
             SrcFile sf;
             sf.filename = tmp ? filename.idup : cast(string)filename;
-            table[filename] = sf;
+            table[sf.filename] = sf;
             p = filename in table;
         }
         return p;
@@ -133,6 +134,9 @@ SrcFile* fileSearch(const(char)[] filename, const string[] paths, int starti, ou
     filename = strip(filename);
     SrcFile* sf;
 
+    char[120] tmpbuf = void;
+    auto buf = Textbuf!char(tmpbuf);
+
     if (isRooted(filename))
     {
         sf = SrcFile.lookup(filename, true);
@@ -143,8 +147,9 @@ SrcFile* fileSearch(const(char)[] filename, const string[] paths, int starti, ou
     {
         if (currentPath)
         {
-            auto name = buildPath(currentPath, filename);
-            sf = SrcFile.lookup(name);
+            buf.initialize();
+            buf.myBuildPath(currentPath, filename);
+            sf = SrcFile.lookup(buf[], true);
             if (sf.read())
             {
                 goto L1;
@@ -154,14 +159,17 @@ SrcFile* fileSearch(const(char)[] filename, const string[] paths, int starti, ou
         {
             foreach (key, path; paths[starti .. $])
             {
-                auto name = buildPath(path, filename);
-                sf = SrcFile.lookup(name);
+                buf.initialize();
+                buf.myBuildPath(path, filename);
+                //writefln("path = '%s', filename = '%s', buf[] = '%s'", path, filename, buf[]);
+                sf = SrcFile.lookup(buf[], true);
                 if (sf.read())
                 {   foundi = cast(int)(starti + key);
                     goto L1;
                 }
             }
         }
+        buf.free();
         return null;
     }
  L1:
@@ -177,6 +185,26 @@ SrcFile* fileSearch(const(char)[] filename, const string[] paths, int starti, ou
         sf2.doesNotExist |= sf.doesNotExist;
         sf = sf2;
     }
+    buf.free();
     return sf;
 }
 
+/*******************************************
+ * Create our own version of std.path.buildPath() that writes to an output range
+ * instead of allocating memory.
+ */
+
+void myBuildPath(R)(ref R buf, const(char)[] seg1, const(char)[] seg2)
+{
+    char sep;
+    foreach (char c; seg1)
+    {   sep = c;
+        buf.put(c);
+    }
+    if (!isDirSeparator(sep))
+        buf.put(dirSeparator[0]);
+    foreach (char c; seg2)
+    {
+        buf.put(c);
+    }
+}

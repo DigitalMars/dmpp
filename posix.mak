@@ -42,6 +42,9 @@ targets : dmpp dmpp
 dmpp : $(SRCS)
 	$(DMD) -g $(SRCS) -ofdmpp
 
+release :
+	$(DMD) -O -release -inline -noboundscheck -g $(SRCS) -ofdmpp
+
 unittest : $(SRCS)
 	$(DMD) -g $(SRCS) -ofdmpp -unittest -cov
 

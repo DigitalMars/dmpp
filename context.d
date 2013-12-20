@@ -470,7 +470,8 @@ struct Context(R)
         auto csf = currentSourceFile();
 
         if (curdir && csf)
-            currentPath = dirName(csf.loc.srcFile.filename);
+            // The string cast is so dirName() won't allocate memory
+            currentPath = dirName(cast(string)csf.loc.srcFile.filename);
 
         if (isSystem)
         {
