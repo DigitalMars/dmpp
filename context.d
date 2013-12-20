@@ -640,7 +640,7 @@ struct Source
     int pathIndex;      // index into paths[] of where this file came from (-1 if not)
     int ifstacki;       // index into ifstack[]
 
-    uchar[256] tmpbuf = void;
+    uchar[257] tmpbuf = void;
     Textbuf!uchar lineBuffer = void;
 
     uint texti;         // index of current position in lineBuffer[]

@@ -539,10 +539,13 @@ struct Lexer(R) if (isInputRange!R)
 
                             /* A temporary buffer to contain the argument strings
                              */
-                            uchar[64] tmpargsbuf = void;
-                            auto argsbuffer = Textbuf!uchar(tmpargsbuf);
+                            uchar[64] tmpargbuf = void;
+                            auto argbuffer = Textbuf!uchar(tmpargbuf);
 
-                            ustring[] args;     // will point into argsbuffer[]
+                            /* A temporary buffer to contain the args[]
+                             */
+                            ustring[16] tmpargsbuf = void;
+                            auto argsbuffer = Textbuf!(ustring)(tmpargsbuf);
 
                             if (m.flags & Id.IDfunctionLike)
                             {
@@ -620,10 +623,9 @@ struct Lexer(R) if (isInputRange!R)
                                 }
 
 //writefln("lexer macroScanArguments('%s')", cast(string)m.name);
-//if (m.name == "BOOST_MPL_AUX_NA_SPEC") logging = true;
                                 src = src.macroScanArguments(m.parameters.length,
                                         !!(m.flags & Id.IDdotdotdot),
-                                         args, argsbuffer);
+                                         argsbuffer, argbuffer);
                             }
                             auto xcnext = src.front;
 
@@ -636,7 +638,7 @@ struct Lexer(R) if (isInputRange!R)
                             uchar[128] tmpbuf3 = void;
                             auto rescanbuffer = Textbuf!uchar(tmpbuf3);
 
-                            macroExpandedText!(typeof(*src))(m, args, expbuffer);
+                            macroExpandedText!(typeof(*src))(m, argsbuffer[], expbuffer);
                             //writefln("expanded: '%s'", expbuffer[]);
                             macroRescan!(typeof(*src))(m, expbuffer[], rescanbuffer);
                             //writefln("rescanned: '%s'", rescanbuffer[]);
@@ -659,6 +661,7 @@ struct Lexer(R) if (isInputRange!R)
                             rescanbuffer.free();
                             expbuffer.free();
                             argsbuffer.free();
+                            argbuffer.free();
                             continue;
                         }
 

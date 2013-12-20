@@ -902,8 +902,6 @@ private void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
                         }
                     }
 
-//writeln("\t3test");
-
                     // Determine if tok_ident[] is a macro
                     auto m = Id.search(id);
                     if (m && m.flags & Id.IDmacro)
@@ -914,7 +912,6 @@ private void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
                             outbuf.setLength(len);      // remove id from outbuf
                             outbuf.put(ESC.expand);
                             outbuf.put(m.name);
-//writeln("\t4continue");
                             continue;
                         }
                         if (m.flags & (Id.IDlinnum | Id.IDfile | Id.IDcounter))
@@ -924,21 +921,21 @@ private void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
                             auto p = ctx.predefined(m);
                             r.push(p);
                             r.popFront();
-//writeln("\t5continue");
                             continue;
                         }
 
                         /* A temporary buffer to contain the argument strings
                          */
-                        uchar[64] tmpargsbuf = void;
-                        auto argsbuffer = Textbuf!uchar(tmpargsbuf);
+                        uchar[64] tmpargbuf = void;
+                        auto argbuffer = Textbuf!uchar(tmpargbuf);
 
-                        ustring[] args; // will point into argsbuffer[]
+                        /* A temporary buffer to contain the args[]
+                         */
+                        ustring[16] tmpargsbuf = void;
+                        auto argsbuffer = Textbuf!(ustring)(tmpargsbuf);
 
-//writeln("\t4test");
                         if (m.flags & Id.IDfunctionLike)
                         {
-//writeln("\t5test");
                             /* Scan up to opening '(' of actual argument list
                              */
                             E space = 0;
@@ -1004,7 +1001,7 @@ private void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
                             //writefln("macroScanArguments('%s')", cast(string)m.name);
                             r = r.macroScanArguments(m.parameters.length,
                                     !!(m.flags & Id.IDdotdotdot),
-                                     args, argsbuffer);
+                                     argsbuffer, argbuffer);
                         }
 
 //writefln("\t3outbuf[] = '%s'", cast(string)outbuf[]);
@@ -1021,7 +1018,7 @@ private void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
                         uchar[128] tmpbuf3 = void;
                         auto rescanbuffer = Textbuf!uchar(tmpbuf3);
 
-                        macroExpandedText!Context(m, args, expbuffer);
+                        macroExpandedText!Context(m, argsbuffer[], expbuffer);
 //if (logging)
 // writefln("\texpanded  = '%s'", cast(string)expbuffer[]);
                         macroRescan!Context(m, expbuffer[], rescanbuffer);
@@ -1045,6 +1042,7 @@ private void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
                         rescanbuffer.free();
                         expbuffer.free();
                         argsbuffer.free();
+                        argbuffer.free();
                     }
                     continue;
                 }
@@ -1115,7 +1113,7 @@ void macroRescan(Context, R)(Id* m, const(uchar)[] text, ref R outbuf)
  *      r past closing )
  */
 
-R macroScanArguments(R, T)(R r, size_t nparameters, bool variadic, out ustring[] args,
+R macroScanArguments(R, S, T)(R r, size_t nparameters, bool variadic, ref S args,
         ref T argsbuffer)
 {
     /* Temporary buffer to store indices into argsbuffer[] rather than pointers,
@@ -1177,14 +1175,14 @@ R macroScanArguments(R, T)(R r, size_t nparameters, bool variadic, out ustring[]
 Lret:
     // Build args[], as argsbuffer[] is no longer going to be reallocated
     size_t nargs = argsindexbuffer.length / 2;
-    args.length = nargs;
+    //args.length = nargs;
     foreach (i; 0 .. nargs)
     {
         if (argsindexbuffer[i * 2] == 0)
-            args[i] = null;
+            args.put(cast(ustring)null);
         else
         {
-            args[i] = cast(ustring)argsbuffer[argsindexbuffer[i * 2] .. argsindexbuffer[i * 2 + 1]];
+            args.put(cast(ustring)argsbuffer[argsindexbuffer[i * 2] .. argsindexbuffer[i * 2 + 1]]);
         }
     }
 
@@ -1198,26 +1196,31 @@ Lret:
 unittest
 {
     ustring s;
-    ustring[] args;
     s = cast(ustring)"ab,cd )a";
 
-    uchar[64] tmpargsbuf = void;
-    auto argsbuffer = Textbuf!uchar(tmpargsbuf);
+    ustring[16] tmpargsbuf = void;
+    auto args = Textbuf!(ustring)(tmpargsbuf);
 
-    argsbuffer.initialize();
-    auto r = s.macroScanArguments(2, false, args, argsbuffer);
+    uchar[64] tmpargbuf = void;
+    auto argbuffer = Textbuf!uchar(tmpargbuf);
+
+    args.initialize();
+    argbuffer.initialize();
+    auto r = s.macroScanArguments(2, false, args, argbuffer);
 //writefln("'%s', %s", args, args.length);
     assert(!r.empty && r.front == 'a');
-    assert(args == ["ab","cd"]);
+    assert(args[] == ["ab","cd"]);
 
     s = cast(ustring)"ab )a";
-    argsbuffer.initialize();
-    r = s.macroScanArguments(2, true, args, argsbuffer);
+    args.initialize();
+    argbuffer.initialize();
+    r = s.macroScanArguments(2, true, args, argbuffer);
 //writefln("'%s', %s", args, args.length);
     assert(!r.empty && r.front == 'a');
-    assert(args == ["ab",""]);
+    assert(args[] == ["ab",""]);
 
-    argsbuffer.free();
+    argbuffer.free();
+    args.free();
 }
 
 /*****************************************

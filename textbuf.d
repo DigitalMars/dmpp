@@ -43,15 +43,15 @@ struct Textbuf(T)
         {
             put(cast(T)c);
         }
-    }
 
-    void put(const(T)[] s)
-    {
-        size_t newlen = i + s.length;
-        if (newlen > buf.length)
-            resize(newlen <= buf.length * 2 ? buf.length * 2 : newlen);
-        buf[i .. newlen] = s[];
-        i = newlen;
+        void put(const(T)[] s)
+        {
+            size_t newlen = i + s.length;
+            if (newlen > buf.length)
+                resize(newlen <= buf.length * 2 ? buf.length * 2 : newlen);
+            buf[i .. newlen] = s[];
+            i = newlen;
+        }
     }
 
     /******
