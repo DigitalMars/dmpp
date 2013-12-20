@@ -603,7 +603,7 @@ bool parseDirective(R)(ref R r)
                     r.src.expanded.off();
                     r.src.expanded.lineBuffer.initialize();
 
-                    uchar[30] tmpbuf = void;
+                    uchar[60] tmpbuf = void;
                     auto stringbuf = Textbuf!uchar(tmpbuf);
                     const(uchar)[] s;
                     bool sysstring = false;
@@ -644,7 +644,8 @@ bool parseDirective(R)(ref R r)
                         err_fatal("end of line expected following #include");
                     r.src.unget();
                     r.src.push('\n');
-                    r.src.includeFile(includeNext, sysstring, cast(string)s.idup);
+                    r.src.includeFile(includeNext, sysstring, cast(char[])s);
+                    stringbuf.free();
                     r.src.popFront();
                     r.src.expanded.on();
                     r.popFront();
@@ -871,7 +872,7 @@ void skipFalseCond(R)(ref R r)
  * Input:
  *      includeNext     if it was #include_next
  *      sysstring       if <file>
- *      s               the filename string
+ *      s               the filename string in a temp buffer
  */
 
 void includeFile(R)(R ctx, bool includeNext, bool sysstring, const(char)[] s)

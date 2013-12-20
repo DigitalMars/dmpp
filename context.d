@@ -487,7 +487,7 @@ struct Context(R)
                 pathIndex = 0;
         }
 
-        auto sf = fileSearch(cast(string)s, paths, pathIndex, pathIndex, currentPath);
+        auto sf = fileSearch(s, paths, pathIndex, pathIndex, currentPath);
         if (!sf)
             return null;
 

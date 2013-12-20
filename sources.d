@@ -33,13 +33,22 @@ struct SrcFile
 
     __gshared SrcFile[string] table;
 
-    static SrcFile* lookup(string filename)
+    /**************************************
+     * Look up filename in table[].
+     * If it isn't there, insert it.
+     * Input:
+     *  filename        the file name
+     *  tmp             if filename needs to be dup'd
+     * Returns:
+     *  SrcFile* (never null)
+     */
+    static SrcFile* lookup(const(char)[] filename, bool tmp = false)
     {
-        SrcFile sf;
-        sf.filename = filename;
         auto p = filename in table;
         if (!p)
         {
+            SrcFile sf;
+            sf.filename = tmp ? filename.idup : cast(string)filename;
             table[filename] = sf;
             p = filename in table;
         }
@@ -102,7 +111,7 @@ struct SrcFile
  * Search for file along paths[].
  * Cache results.
  * Input:
- *      filename        file to look for
+ *      filename        file to look for (in a tmp buffer)
  *      paths[]         search paths
  *      starti          start searching at paths[starti]
  *      currentPath     if !null, then the path to the enclosing file
@@ -113,7 +122,7 @@ struct SrcFile
  *      fully qualified filename if found, null if not
  */
 
-SrcFile* fileSearch(string filename, const string[] paths, int starti, out int foundi,
+SrcFile* fileSearch(const(char)[] filename, const string[] paths, int starti, out int foundi,
         string currentPath)
 {
     //writefln("fileSearch(filename='%s', starti=%s, currentPath='%s')", filename, starti, currentPath);
@@ -126,7 +135,7 @@ SrcFile* fileSearch(string filename, const string[] paths, int starti, out int f
 
     if (isRooted(filename))
     {
-        sf = SrcFile.lookup(filename);
+        sf = SrcFile.lookup(filename, true);
         if (!sf.read())
             return null;
     }
@@ -156,10 +165,10 @@ SrcFile* fileSearch(string filename, const string[] paths, int starti, out int f
         return null;
     }
  L1:
-    filename = buildNormalizedPath(sf.filename);
-    if (filenameCmp(filename, sf.filename))
+    auto normfilename = buildNormalizedPath(sf.filename);
+    if (filenameCmp(normfilename, sf.filename))
     {   // Cache the normalized file name as a clone of the original unnormalized one
-        auto sf2 = SrcFile.lookup(filename);
+        auto sf2 = SrcFile.lookup(normfilename);
         if (!sf2.contents)
             sf2.contents = sf.contents;
         if (!sf2.includeGuard)
