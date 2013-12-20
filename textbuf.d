@@ -140,7 +140,7 @@ struct Textbuf(T, string id = null)
             debug(Textbuf) buf[0 .. buflen] = 0;
         }
         buf = cast(T*)p;
-        buflen = newsize | RESIZED;
+        buflen = cast(uint)newsize | RESIZED;
     }
 }
 
