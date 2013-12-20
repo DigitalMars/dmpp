@@ -127,9 +127,19 @@ struct Expanded(R)
 
     void put(ustring s)
     {
-//writefln("expanded.put('%s')", cast(string)s);
-        foreach (uchar c; s)
-            put(c);
+        //writefln("expanded.put('%s')", cast(string)s);
+        /* This will always be an identifier string, so we can skip
+         * a lot of the checking.
+         */
+        if (!noexpand)
+        {
+            if (s.length > 0)
+            {
+                put(s[0]);
+                if (s.length > 1)
+                    lineBuffer.put(s[1 .. $]);
+            }
+        }
     }
 
     /*******************

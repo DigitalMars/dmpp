@@ -10,6 +10,7 @@
 module id;
 
 import core.stdc.stdio;
+import core.stdc.stdlib;
 import core.stdc.time;
 import std.stdio;
 
@@ -22,13 +23,19 @@ import main;
 
 struct Id
 {
-    __gshared Id*[ustring] table;
+    enum buckets_length = 24_593UL;
+    __gshared Id*[] buckets;
+
+    __gshared uint count;
 
     ustring name;
+    size_t hash;
+    Id* next;
 
-    private this(ustring name)
+    private this(ustring name, size_t hash)
     {
         this.name = name;
+        this.hash = hash;
     }
 
     /******************************
@@ -40,11 +47,14 @@ struct Id
          * same macros. So leave the table in place - just #undef all the
          * entries.
          */
-        foreach (m; table)
+        foreach (m; buckets)
         {
-            m.flags = 0;
-            m.text = null;
-            m.parameters = null;
+            for (; m; m = m.next)
+            {
+                m.flags = 0;
+                m.text = null;
+                m.parameters = null;
+            }
         }
     }
 
@@ -55,8 +65,18 @@ struct Id
      */
     static Id* search(const(uchar)[] name)
     {
-        auto p = name in table;
-        return p ? *p : null;
+        if (buckets.length)
+        {
+            auto hash = getHash(name);
+            auto bucket = buckets[hash % buckets_length];
+            while (bucket)
+            {
+                if (bucket.hash == hash && bucket.name == name)
+                    return bucket;
+                bucket = bucket.next;
+            }
+        }
+        return null;
     }
 
 
@@ -67,11 +87,26 @@ struct Id
      */
     static Id* pool(ustring name)
     {
-        auto p = name in table;
-        if (p)
-            return *p;
-        auto id = new Id(name);
-        table[name] = id;
+        if (!buckets.length)
+        {
+            buckets = (cast(Id**)calloc((Id*).sizeof, buckets_length))[0 .. buckets_length];
+            assert(buckets.ptr);
+        }
+
+        auto hash = getHash(name);
+        auto pbucket = &buckets[hash % buckets_length];
+//int depth;
+        while (*pbucket)
+        {
+//++depth;
+            if ((*pbucket).hash == hash && (*pbucket).name == name)
+                return *pbucket;
+            pbucket = &(*pbucket).next;
+        }
+        auto id = new Id(name, hash);
+        *pbucket = id;
+//++count;
+//writefln("%s %s %s", count, depth, cast(string)name);
         return id;
     }
 
@@ -141,5 +176,18 @@ struct Id
 
         len = sprintf(cast(char*)date.ptr,"\"%.8s\"",p+11);
         defineMacro(cast(ustring)"__TIME__", null, date[0..len].idup, IDpredefined);
+    }
+
+    static size_t getHash(const(uchar)[] name)
+    {
+        size_t hash = 0;
+        while (name.length >= size_t.sizeof)
+        {
+            hash = hash * 37 + *cast(size_t*)name.ptr;
+            name = name[size_t.sizeof .. $];
+        }
+        foreach (c; name)
+            hash = hash * 37 + c;
+        return hash;
     }
 }
