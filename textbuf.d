@@ -25,12 +25,13 @@ struct Textbuf(T, string id = null)
 {
     this(T[] buf)
     {
-        this.buf = buf;
+        this.buf = buf.ptr;
+        this.buflen = cast(uint)buf.length;
     }
 
     void put(T c)
     {
-        if (i == buf.length)
+        if (i == (buflen & ~RESIZED))
         {
             resize(i ? i * 2 : 16);
         }
@@ -47,10 +48,11 @@ struct Textbuf(T, string id = null)
         void put(const(T)[] s)
         {
             size_t newlen = i + s.length;
-            if (newlen > buf.length)
-                resize(newlen <= buf.length * 2 ? buf.length * 2 : newlen);
+            auto len = buflen & ~RESIZED;
+            if (newlen > len)
+                resize(newlen <= len * 2 ? len * 2 : newlen);
             buf[i .. newlen] = s[];
-            i = newlen;
+            i = cast(uint)newlen;
         }
     }
 
@@ -59,16 +61,21 @@ struct Textbuf(T, string id = null)
      */
     T[] opSlice(size_t lwr, size_t upr)
     {
+        assert(lwr < (buflen & ~RESIZED));
+        assert(upr <= (buflen & ~RESIZED));
+        assert(lwr <= upr);
         return buf[lwr .. upr];
     }
 
     T[] opSlice()
     {
+        assert(i <= (buflen & ~RESIZED));
         return buf[0 .. i];
     }
 
     T opIndex(size_t i)
     {
+        assert(i < (buflen & ~RESIZED));
         return buf[i];
     }
 
@@ -76,11 +83,13 @@ struct Textbuf(T, string id = null)
 
     T last()
     {
+        assert(i - 1 < (buflen & ~RESIZED));
         return buf[i - 1];
     }
 
     T pop()
     {
+        assert(i - 1 < (buflen & ~RESIZED));
         return buf[--i];
     }
 
@@ -91,7 +100,8 @@ struct Textbuf(T, string id = null)
 
     void setLength(size_t i)
     {
-        this.i = i;
+        assert(i < (buflen & ~RESIZED));
+        this.i = cast(uint)i;
     }
 
     /**************************
@@ -99,37 +109,38 @@ struct Textbuf(T, string id = null)
      */
     void free()
     {
-        debug(Textbuf) buf[] = 0;
-        if (resized)
-            .free(buf.ptr);
+        debug(Textbuf) buf[0 .. buflen & ~RESIZED] = 0;
+        if (buflen & RESIZED)
+            .free(buf);
         this = this.init;
     }
 
   private:
-    T[] buf;
-    size_t i;
-    bool resized;
+    T* buf;
+    uint buflen;
+    enum RESIZED = 0x8000_0000;         // this bit is set in buflen if we control the memory
+    uint i;
 
     void resize(size_t newsize)
     {
         //writefln("%s: oldsize %s newsize %s", id, buf.length, newsize);
         void* p;
-        if (resized)
+        if (buflen & RESIZED)
         {
             /* Prefer realloc when possible
              */
-            p = realloc(buf.ptr, newsize * T.sizeof);
+            p = realloc(buf, newsize * T.sizeof);
             assert(p);
         }
         else
         {
             p = malloc(newsize * T.sizeof);
             assert(p);
-            memcpy(p, buf.ptr, i * T.sizeof);
-            resized = true;
-            debug(Textbuf) buf[] = 0;
+            memcpy(p, buf, i * T.sizeof);
+            debug(Textbuf) buf[0 .. buflen] = 0;
         }
-        buf = (cast(T*)p)[0 .. newsize];
+        buf = cast(T*)p;
+        buflen = newsize | RESIZED;
     }
 }
 
