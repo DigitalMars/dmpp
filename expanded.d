@@ -60,69 +60,72 @@ struct Expanded(R)
         if (c != ESC.space && !noexpand)
         {
             if (lineBuffer.length && lineBuffer.last() == '\n')
-            {
-                if (lineBuffer[0] != '\n')
-                {
-                    auto s = ctx.currentSourceFile();
-                    if (s)
-                    {
-                        auto linnum = s.loc.lineNumber - 1;
-                        if (!ctx.lastloc.srcFile || ctx.lastloc.srcFile != s.loc.srcFile)
-                        {
-                            if (ctx.uselastloc)
-                            {
-    //writeln("test1");
-                                ctx.lastloc.linemarker(foutr);
-                            }
-                            else
-                            {
-                                /* Since the next readLine() has already been called,
-                                 * s.loc.lineNumber is one ahead of the expanded line
-                                 * that has yet to be written out. So linemarker() subtracts
-                                 * one to compensage.
-                                 * However, if the next readLine() read a \ line spliced line,
-                                 * s.loc.lineNumber may be further ahead than just one.
-                                 * This, then, is a bug.
-                                 */
-    //writeln("test2");
-                                s.loc.linemarker(foutr);
-                                ctx.lastloc = s.loc;
-                            }
-                        }
-                        else if (linnum != lineNumber)
-                        {
-                            if (linnum == lineNumber + 1)
-                                lineBuffer.put('\n');
-                            else
-                            {
-                                if (lineNumber + 30 < linnum)
-                                {
-                                    foreach (i; lineNumber .. linnum)
-                                        lineBuffer.put('\n');
-                                }
-                                else
-                                {
-    //writeln("test3");
-                                    s.loc.linemarker(foutr);
-                                }
-                            }
-                        }
-                        lineNumber = linnum;
-                    }
-                    else if (ctx.uselastloc && ctx.lastloc.srcFile)
-                    {
-    //writeln("test4");
-                        ctx.lastloc.linemarker(foutr);
-                    }
-                }
-                ctx.uselastloc = false;
-                foutr.writePreprocessedLine(lineBuffer[]);
-                lineBuffer.initialize();
-                ++lineNumber;
-            }
+                put2();
             //writefln("lineBuffer.put('%c')", c);
             lineBuffer.put(c);
         }
+    }
+
+    void put2()
+    {
+        if (lineBuffer[0] != '\n')
+        {
+            auto s = ctx.currentSourceFile();
+            if (s)
+            {
+                auto linnum = s.loc.lineNumber - 1;
+                if (!ctx.lastloc.srcFile || ctx.lastloc.srcFile != s.loc.srcFile)
+                {
+                    if (ctx.uselastloc)
+                    {
+//writeln("test1");
+                        ctx.lastloc.linemarker(foutr);
+                    }
+                    else
+                    {
+                        /* Since the next readLine() has already been called,
+                         * s.loc.lineNumber is one ahead of the expanded line
+                         * that has yet to be written out. So linemarker() subtracts
+                         * one to compensage.
+                         * However, if the next readLine() read a \ line spliced line,
+                         * s.loc.lineNumber may be further ahead than just one.
+                         * This, then, is a bug.
+                         */
+//writeln("test2");
+                        s.loc.linemarker(foutr);
+                        ctx.lastloc = s.loc;
+                    }
+                }
+                else if (linnum != lineNumber)
+                {
+                    if (linnum == lineNumber + 1)
+                        lineBuffer.put('\n');
+                    else
+                    {
+                        if (lineNumber + 30 < linnum)
+                        {
+                            foreach (i; lineNumber .. linnum)
+                                lineBuffer.put('\n');
+                        }
+                        else
+                        {
+//writeln("test3");
+                            s.loc.linemarker(foutr);
+                        }
+                    }
+                }
+                lineNumber = linnum;
+            }
+            else if (ctx.uselastloc && ctx.lastloc.srcFile)
+            {
+//writeln("test4");
+                ctx.lastloc.linemarker(foutr);
+            }
+        }
+        ctx.uselastloc = false;
+        foutr.writePreprocessedLine(lineBuffer[]);
+        lineBuffer.initialize();
+        ++lineNumber;
     }
 
     void put(ustring s)

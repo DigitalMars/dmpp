@@ -43,7 +43,7 @@ dmpp : $(SRCS)
 	$(DMD) -g $(SRCS) -ofdmpp
 
 release :
-	$(DMD) -O -release -inline -noboundscheck -g $(SRCS) -ofdmpp
+	$(DMD) -O -release -inline -noboundscheck $(SRCS) -ofdmpp
 
 unittest : $(SRCS)
 	$(DMD) -g $(SRCS) -ofdmpp -unittest -cov

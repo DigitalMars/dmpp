@@ -250,6 +250,21 @@ struct Context(R)
 
     void popFront()
     {
+        auto s = stack.psource;
+        if (s.texti < s.lineBuffer.length)
+        {
+            stack.xc = s.lineBuffer[s.texti];
+            ++s.texti;
+            expanded.put(stack.xc);
+        }
+        else
+        {
+            popFront2();
+        }
+    }
+
+    void popFront2()
+    {
         while (1)
         {
             auto s = stack.psource;
@@ -590,6 +605,18 @@ struct SourceStack
 
     void popFront()
     {
+        auto s = psource;
+        if (s.texti < s.lineBuffer.length)
+        {
+            xc = s.lineBuffer[s.texti];
+            ++s.texti;
+        }
+        else
+            popFront2();
+    }
+
+    void popFront2()
+    {
         while (1)
         {
             auto s = psource;
@@ -630,6 +657,14 @@ struct SourceStack
 
 struct Source
 {
+    Textbuf!(uchar,"src") lineBuffer = void;
+
+    uint texti;         // index of current position in lineBuffer[]
+
+    bool isFile;        // if it is a file
+    bool isExpanded;    // true if already macro expanded
+    bool seenTokens;    // true if seen tokens
+
     // Double linked list of stack of Source's
     Source* prev;
     Source* next;
@@ -641,14 +676,7 @@ struct Source
     int pathIndex;      // index into paths[] of where this file came from (-1 if not)
     int ifstacki;       // index into ifstack[]
 
-    uchar[257] tmpbuf = void;
-    Textbuf!(uchar,"src") lineBuffer = void;
-
-    uint texti;         // index of current position in lineBuffer[]
-
-    bool isFile;        // if it is a file
-    bool isExpanded;    // true if already macro expanded
-    bool seenTokens;    // true if seen tokens
+    uchar[256] tmpbuf = void;
 
     /*****
      * Instead of constructing them individually, do them as a group,
