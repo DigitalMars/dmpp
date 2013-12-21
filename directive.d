@@ -653,7 +653,7 @@ bool parseDirective(R)(ref R r)
                 }
 
                 default:
-                    err_fatal("unrecognized preprocessing directive #%s", id);
+                    err_fatal("unrecognized preprocessing directive #%s", cast(string)id);
                     r.popFront();
                     return true;
             }
