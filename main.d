@@ -21,6 +21,8 @@ import sources;
 alias ubyte uchar;
 alias immutable(uchar)[] ustring;
 
+extern (C) int isatty(int);
+
 alias typeof(File.lockingTextWriter()) R;
 
 version (unittest)
@@ -62,6 +64,8 @@ else
                 scope(failure) if (!params.stdout) std.file.remove(outFilename);
 
                 auto fout = params.stdout ? stdout : File(outFilename, "wb");
+                if (!isatty(fout.fileno))
+                    fout.setvbuf(0x100000);
                 auto foutr = fout.lockingTextWriter();      // has destructor
 
                 context.localStart(sf, &foutr);

@@ -1425,22 +1425,29 @@ bool isMultiTok(uchar c) pure nothrow
 
 void writePreprocessedLine(R)(ref R r, const(uchar)[] line) if (isOutputRange!(R, uchar))
 {
-    auto end = line.ptr + line.length;
     auto start = line.ptr;
     auto p = start;
   Loop:
     while (1)
     {
-        if (p == end)
-            break;
-
         auto c = *p;
         if (cast(byte)c >= ' ')
-            r.put(c);
+        {
+            ++p;
+            static if (is(typeof(r.handle)))
+                FPUTC(c, r.handle);   // slightly faster than r.put(c)
+            else
+                r.put(c);
+            continue;
+        }
         else
         {
             switch (c)
             {
+                case 0:
+                    r.put('\n');
+                    return;
+
                 case '\r':
                 case '\n':
                     break;      // ignore
@@ -1460,8 +1467,8 @@ void writePreprocessedLine(R)(ref R r, const(uchar)[] line) if (isOutputRange!(R
                     uchar cnext;
                     while (1)
                     {
-                        if (p + 1 == end)       // ignore if at end
-                            break Loop;
+                        if (p[1] == 0)       // ignore if at end
+                            goto case 0;
                         ++p;
                         cnext = *p;
                         if (cnext != ESC.brk)   // treat multiple ESC.brk's as one
@@ -1480,7 +1487,6 @@ void writePreprocessedLine(R)(ref R r, const(uchar)[] line) if (isOutputRange!(R
         }
         ++p;
     }
-    r.put('\n');
 }
 
 unittest

@@ -123,6 +123,7 @@ struct Expanded(R)
             }
         }
         ctx.uselastloc = false;
+        lineBuffer.put(0);              // add sentinel
         foutr.writePreprocessedLine(lineBuffer[]);
         lineBuffer.initialize();
         ++lineNumber;

@@ -10,6 +10,7 @@ module context;
 
 import core.stdc.stdio;
 import core.stdc.stdlib;
+import core.stdc.string;
 
 import std.algorithm;
 import std.array;
@@ -168,6 +169,7 @@ struct Context(R)
         s.addFile(sf, isSystem, pathIndex);
         if (lastloc.srcFile)
             uselastloc = true;
+        assert(s.ptext);
     }
 
     /**********
@@ -251,16 +253,15 @@ struct Context(R)
     void popFront()
     {
         auto s = stack.psource;
-        if (s.texti < s.lineBuffer.length)
+        auto c = *s.ptext;
+        if (c)
         {
-            stack.xc = s.lineBuffer[s.texti];
-            ++s.texti;
-            expanded.put(stack.xc);
+            ++s.ptext;
+            stack.xc = c;
+            expanded.put(c);
         }
         else
-        {
             popFront2();
-        }
     }
 
     void popFront2()
@@ -268,12 +269,8 @@ struct Context(R)
         while (1)
         {
             auto s = stack.psource;
-            if (s.texti < s.lineBuffer.length)
-            {
-                stack.xc = s.lineBuffer[s.texti];
-                ++s.texti;
-            }
-            else
+            stack.xc = *s.ptext++;
+            if (stack.xc == 0)
             {
                 if (s.isFile && !s.input.empty)
                 {
@@ -295,18 +292,20 @@ struct Context(R)
     uchar[] restOfLine()
     {
         auto s = stack.psource;
-        auto result = s.lineBuffer[s.texti .. s.lineBuffer.length];
-        s.texti = cast(uint)s.lineBuffer.length;
+        auto len = strlen(cast(char*)s.ptext);
+        auto result = s.ptext[0 .. len];
+        s.ptext += len;
         stack.xc = '\n';
         return result;
     }
 
     void unget()
     {
-        if (stack.psource && stack.psource.texti)
+        auto s = stack.psource;
+        if (s && s.ptext > s.lineBuffer[].ptr)
         {
-            --stack.psource.texti;
-            assert(stack.psource.lineBuffer[stack.psource.texti] == stack.xc);
+            --s.ptext;
+            assert(*s.ptext == stack.xc);
         }
     }
 
@@ -315,7 +314,8 @@ struct Context(R)
         auto s = push();
         s.lineBuffer.initialize();
         s.lineBuffer.put(c);
-        s.texti = 0;
+        s.lineBuffer.put(0);
+        s.ptext = s.lineBuffer[].ptr;
     }
 
     void push(const(uchar)[] str)
@@ -323,7 +323,8 @@ struct Context(R)
         auto s = push();
         s.lineBuffer.initialize();
         s.lineBuffer.put(str);
-        s.texti = 0;
+        s.lineBuffer.put(0);
+        s.ptext = s.lineBuffer[].ptr;
     }
 
     Source* currentSourceFile()
@@ -609,10 +610,11 @@ struct SourceStack
     void popFront()
     {
         auto s = psource;
-        if (s.texti < s.lineBuffer.length)
+        auto c = *s.ptext;
+        if (c)
         {
-            xc = s.lineBuffer[s.texti];
-            ++s.texti;
+            xc = c;
+            ++s.ptext;
         }
         else
             popFront2();
@@ -623,12 +625,8 @@ struct SourceStack
         while (1)
         {
             auto s = psource;
-            if (s.texti < s.lineBuffer.length)
-            {
-                xc = s.lineBuffer[s.texti];
-                ++s.texti;
-            }
-            else
+            xc = *s.ptext++;
+            if (xc == 0)
             {
                 if (s.isFile && !s.input.empty)
                 {
@@ -662,7 +660,7 @@ struct Source
 {
     Textbuf!(uchar,"src") lineBuffer = void;
 
-    uint texti;         // index of current position in lineBuffer[]
+    uchar* ptext;
 
     bool isFile;        // if it is a file
     bool isExpanded;    // true if already macro expanded
@@ -713,6 +711,7 @@ struct Source
         this.pathIndex = pathIndex;
         this.isExpanded = false;
         this.seenTokens = false;
+        readLine();
     }
 
     /***************************
@@ -737,9 +736,10 @@ struct Source
             else
                 break;
         }
-        texti = 0;
+        lineBuffer.put(0);              // add sentinel
+        ptext = lineBuffer[].ptr;
 
-        assert(!lineBuffer.length || lineBuffer[lineBuffer.length - 1] == '\n');
+        assert(lineBuffer.length == 1 || lineBuffer[lineBuffer.length - 2] == '\n');
         //writefln("\t%d", loc.lineNumber);
     }
 }
