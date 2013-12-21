@@ -639,7 +639,7 @@ struct Lexer(R) if (isInputRange!R)
 
                             expbuffer.initialize();
                             macroExpandedText!(typeof(*src))(m, argsbuffer[], expbuffer);
-                            //writefln("expanded: '%s'", expbuffer[]);
+                            //writefln("l expanded: '%s'", cast(string)expbuffer[]);
 
                             rescanbuffer.initialize();
 
@@ -650,7 +650,7 @@ struct Lexer(R) if (isInputRange!R)
                             auto rs = rescanbuffer[];
                             rs = rs.trimWhiteSpace();
 
-                            //writefln("rescanned: '%s'", rescanbuffer[]);
+                            //writefln("l rescanned: '%s'", cast(string)rescanbuffer[]);
 
                             /*
                              * Insert break if necessary to prevent

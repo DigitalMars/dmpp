@@ -29,6 +29,8 @@ ZIP=zip32
 # Copy to another directory
 SCP=$(CP)
 
+MFLAGS=
+
 SRCS=main.d cmdline.d context.d id.d skip.d macros.d textbuf.d ranges.d outdeps.d \
 	lexer.d constexpr.d number.d stringlit.d sources.d loc.d expanded.d \
 	directive.d
@@ -43,7 +45,7 @@ dmpp.exe : $(SRCS)
 	$(DMD) -g $(SRCS) -ofdmpp.exe
 
 release :
-	$(DMD) -O -release -inline -noboundscheck $(SRCS) -ofdmpp.exe
+	$(DMD) $(MFLAGS) -O -release -inline -noboundscheck $(SRCS) -ofdmpp.exe
 
 profile :
 	$(DMD) -profile $(SRCS) -ofdmpp.exe

@@ -674,7 +674,7 @@ void macroExpandedText(Context, R)(Id* m, ustring[] args, ref R buffer)
 
                             //writefln("CAT pe = %s, a.length = %s, b.length = %s", pe, a.length, b.length);
                             buffer.put(a[0 .. pe]);
-                            buffer.put(a[pe + 1 .. a.length - (pe + 1)]);
+                            buffer.put(a[pe + 1 .. a.length]);
                             buffer.put(b);
                             q += 4;
                             continue;
@@ -684,7 +684,7 @@ void macroExpandedText(Context, R)(Id* m, ustring[] args, ref R buffer)
             }
         L1:
             auto a = getIthArg(args, argi);
-            //writefln("\targ[%d] = '%s'", argi, a);
+            //writefln("\t\targ[%d] = '%s'", argi, cast(string)a);
             if (expand)
             {
                 //writefln("\t\tbefore '%s'", cast(string)a);
@@ -842,7 +842,7 @@ void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
                     size_t len = outbuf.length;
                     r = r.inIdentifier(outbuf);
                     debug (MacroExpand)
-                        writefln("\tident[] = '%s'", outbuf[len .. outbuf.length]);
+                        writefln("\tident[] = '%s'", cast(string)outbuf[len .. outbuf.length]);
                     if (expanded && !r.empty && r.isExpanded())
                     {
                         continue;
@@ -1057,8 +1057,8 @@ Ldone:
 
     ctx.expanded.on();
 
-//    debug (MacroExpand)
-//        writefln("-macroExpand() = '%s'", cast(string)outbuf[0 .. outbuf.length]);
+    debug (MacroExpand)
+        writefln("-macroExpand() = '%s'", cast(string)outbuf[0 .. outbuf.length]);
 }
 
 
