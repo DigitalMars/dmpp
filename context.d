@@ -484,9 +484,19 @@ struct Context(R)
         string currentPath;
         auto csf = currentSourceFile();
 
-        if (curdir && csf)
-            // The string cast is so dirName() won't allocate memory
-            currentPath = dirName(cast(string)csf.loc.srcFile.filename);
+        if (curdir)
+        {
+            Loc* ploc;
+            if (csf)
+                ploc = &csf.loc;
+             else
+                ploc = &lastloc;
+
+            if (ploc.srcFile)
+                // The string cast is so dirName() won't allocate memory
+                currentPath = dirName(cast(string)ploc.srcFile.filename);
+
+        }
 
         if (isSystem)
         {
