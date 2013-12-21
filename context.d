@@ -529,36 +529,26 @@ struct Context(R)
  * Make sure line ends with \n
  */
 
-R readLine(R, S)(R r, ref S s)
+R readSrcLine(R, S)(R r, ref S s)
         if (isInputRange!R && isOutputRange!(S,ElementEncodingType!R))
 {
     alias Unqual!(ElementEncodingType!R) E;
 
+    auto p = r.ptr;
+    auto pend = r.ptr + r.length;
+
     while (1)
     {
-        if (r.empty)
-        {
-            s.put('\n');
+        if (p == pend)
             break;
-        }
-        E c = cast(E)r.front;
-        r.popFront();
-        switch (c)
-        {
-            case '\r':
-                continue;
-
-            case '\n':
-                s.put(c);
-                break;
-
-            default:
-                s.put(c);
-                continue;
-        }
-        break;
+        E c = *p++;
+        if (c == '\n')
+            break;
+        else if (c != '\r')
+            s.put(c);
     }
-    return r;
+    s.put('\n');
+    return r[p - r.ptr .. $];
 }
 
 
@@ -726,7 +716,7 @@ struct Source
         while (!input.empty)
         {
             ++loc.lineNumber;
-            input = input.readLine(lineBuffer);
+            input = input.readSrcLine(lineBuffer);
             if (lineBuffer.length >= 2 &&
                 lineBuffer[lineBuffer.length - 2] == '\\')
             {

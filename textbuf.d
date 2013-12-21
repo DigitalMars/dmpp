@@ -32,11 +32,13 @@ struct Textbuf(T, string id = null)
 
     void put(T c)
     {
-        if (i == buflen)
+        const j = i;
+        if (j == buflen)
         {
-            resize(i ? i * 2 : 16);
+            resize(j * 2 + 16);
         }
-        buf[i++] = c;
+        buf[j] = c;
+        i = j + 1;
     }
 
     static if (T.sizeof == 1)
@@ -48,8 +50,8 @@ struct Textbuf(T, string id = null)
 
         void put(const(T)[] s)
         {
-            size_t newlen = i + s.length;
-            auto len = buflen;
+            const newlen = i + s.length;
+            const len = buflen;
             if (newlen > len)
                 resize(newlen <= len * 2 ? len * 2 : newlen);
             buf[i .. newlen] = s[];
@@ -143,6 +145,11 @@ struct Textbuf(T, string id = null)
         }
         buf = cast(T*)p;
         buflen = cast(uint)newsize;
+
+        /* Fake loop to prevent inlining. This function is called only rarely,
+         * inlining results in poorer register allocation.
+         */
+        while (1) { break; }
     }
 }
 
