@@ -1007,7 +1007,7 @@ void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
                         uchar[278] tmpbuf2 = void;
                         auto expbuffer = Textbuf!(uchar,"exp")(tmpbuf2);
 
-                        uchar[131] tmpbuf3 = void;
+                        uchar[132] tmpbuf3 = void;
                         auto rescanbuffer = Textbuf!(uchar,"rsc")(tmpbuf3);
 
                         macroExpandedText!Context(m, argsbuffer[], expbuffer);
