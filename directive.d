@@ -595,9 +595,19 @@ bool parseDirective(R)(ref R r)
                 case "include":
                 Linclude:
                 {
-                    auto sf = r.src.currentSourceFile();
-                    if (sf)
-                        sf.seenTokens = true;
+                    // Things to know about the file doing the #include'ing
+                    string currentFile;         // file name
+                    int pathIndex;              // path index
+                    bool isSystem;              // is it a system file
+
+                    auto csf = r.src.currentSourceFile();
+                    if (csf)
+                    {
+                        csf.seenTokens = true;
+                        currentFile = cast(string)csf.loc.srcFile.filename;
+                        pathIndex = csf.pathIndex;
+                        isSystem = csf.loc.isSystem;
+                    }
 
                     // Turn off expanded output so this line is not emitted
                     r.src.expanded.off();
@@ -644,7 +654,8 @@ bool parseDirective(R)(ref R r)
                         err_fatal("end of line expected following #include");
                     r.src.unget();
                     r.src.push('\n');
-                    r.src.includeFile(includeNext, sysstring, cast(char[])s);
+                    r.src.includeFile(includeNext, sysstring, cast(char[])s,
+                        currentFile, pathIndex, isSystem);
                     stringbuf.free();
                     r.src.popFront();
                     r.src.expanded.on();
@@ -873,21 +884,23 @@ void skipFalseCond(R)(ref R r)
  *      includeNext     if it was #include_next
  *      sysstring       if <file>
  *      s               the filename string in a temp buffer
+ *      currentFile     the file that is doing the #include
+ *      pathIndex       the path index of the file that is doing the #include
+ *      isSystem        the file doing the #include is a system file
  */
 
-void includeFile(R)(R ctx, bool includeNext, bool sysstring, const(char)[] s)
+void includeFile(R)(R ctx, bool includeNext, bool sysstring, const(char)[] s,
+        string currentFile, int pathIndex, bool isSystem)
 {
     //writefln("includeFile('%s')", s);
     s = strip(s);       // remove leading and trailing whitespace
 
     bool curdir = !sysstring && !includeNext;   // always look at current directory first
 
-    auto csf = ctx.currentSourceFile();
-    if (csf && csf.loc.isSystem)
+    if (isSystem)
         sysstring = true;
 
-    int pathIndex;
-    auto sf = ctx.searchForFile(includeNext, curdir, sysstring, s, pathIndex);
+    auto sf = ctx.searchForFile(includeNext, curdir, sysstring, s, pathIndex, currentFile);
     if (!sf)
     {
         err_fatal("#include file '%s' not found", s);

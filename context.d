@@ -474,41 +474,34 @@ struct Context(R)
 
     /*******************************************
      * Search for file along paths[]
+     * Input:
+     *  s               file to search for (in a temp buffer)
+     *  currentFile     file name of file doing the #include
+     *  pathIndex       index of file doing the #include
      * Output:
      *  pathIndex       index of where file was found
      *  isSystem        set to true if file is found in -isystem paths
      */
-    SrcFile* searchForFile(bool includeNext, bool curdir, ref bool isSystem, const(char)[] s, out int pathIndex)
+    SrcFile* searchForFile(bool includeNext, bool curdir, ref bool isSystem, const(char)[] s,
+        ref int pathIndex, string currentFile)
     {
         //writefln("searchForFile(includeNext = %s, curdir = %s, isSystem = %s, s = '%s')", includeNext, curdir, isSystem, s);
+
         string currentPath;
-        auto csf = currentSourceFile();
-
         if (curdir)
-        {
-            Loc* ploc;
-            if (csf)
-                ploc = &csf.loc;
-             else
-                ploc = &lastloc;
-
-            if (ploc.srcFile)
-                // The string cast is so dirName() won't allocate memory
-                currentPath = dirName(cast(string)ploc.srcFile.filename);
-
-        }
+            currentPath = dirName(currentFile);
 
         if (isSystem)
         {
-            if (csf && includeNext)
-                pathIndex = csf.pathIndex + 1;
+            if (includeNext)
+                ++pathIndex;
             else
                 pathIndex = 0; //cast(int)sysIndex;
         }
         else
         {
-            if (csf && includeNext)
-                pathIndex = csf.pathIndex + 1;
+            if (includeNext)
+                ++pathIndex;
             else
                 pathIndex = 0;
         }
