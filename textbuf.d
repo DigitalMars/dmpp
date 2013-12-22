@@ -64,7 +64,7 @@ struct Textbuf(T, string id = null)
      */
     T[] opSlice(size_t lwr, size_t upr)
     {
-        assert(lwr < buflen);
+        assert(lwr <= buflen);
         assert(upr <= buflen);
         assert(lwr <= upr);
         return buf[lwr .. upr];
