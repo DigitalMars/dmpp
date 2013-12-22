@@ -544,6 +544,13 @@ R readSrcLine(R, S)(R r, ref S s)
         E c = *p++;
         if (c == '\n')
             break;
+/+
+        else if (c == 0)
+        {
+            --p;
+            break;
+        }
++/
         else if (c != '\r')
             s.put(c);
     }

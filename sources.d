@@ -98,7 +98,12 @@ struct SrcFile
         }
 
         bool result = true;
-        try
+        if (!exists(filename))
+        {
+            result = false;
+            doesNotExist = true;
+        }
+        else try
         {
             contents = cast(ustring)file.myRead(filename);
         }

@@ -97,13 +97,14 @@ void[] myRead(in char[] name, size_t upTo = size_t.max)
         auto size = GetFileSize(h, null);
         cenforce(size != INVALID_FILE_SIZE, name);
         size = min(upTo, size);
-        auto buf = malloc(size);
+        auto buf = malloc(size + 1);
         assert(buf);
         scope(failure) free(buf);
 
         DWORD numread = void;
         cenforce(ReadFile(h, buf, size, &numread, null) == 1
                 && numread == size, name);
+        (cast(ubyte*)buf)[size] = 0;            // sentinel at end
         return buf[0 .. size];
     }
     else version(Posix)
