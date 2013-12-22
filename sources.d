@@ -99,7 +99,7 @@ struct SrcFile
 
         bool result = true;
         contents = cast(ustring)file.myRead(filename);
-        if (contents == null)
+        if (contents.ptr == null)
         {
             result = false;
             doesNotExist = true;
