@@ -911,12 +911,12 @@ void includeFile(R)(R ctx, bool includeNext, bool sysstring, const(char)[] s,
     {
         if (ctx.params.verbose)
         {
-            writef("%s%s",
+            stderr.writef("%s%s",
                     c,
                     sysstring ? "S" : " ");
             for (auto level = ctx.nestLevel(); level > 0; --level)
-                write(' ');
-            writeln(sf.filename);
+                stderr.write(' ');
+            stderr.writeln(sf.filename);
         }
     }
 

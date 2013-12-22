@@ -11,7 +11,9 @@
 module sources;
 
 import core.memory;
+import core.stdc.stdlib;
 import std.file;
+import file;
 import std.path;
 import std.stdio;
 import std.string;
@@ -77,7 +79,8 @@ struct SrcFile
      */
     void freeContents()
     {
-        GC.free(cast(void*)contents.ptr);
+        //GC.free(cast(void*)contents.ptr);
+        free(cast(void*)contents.ptr);
         contents = null;
     }
 
@@ -97,7 +100,7 @@ struct SrcFile
         bool result = true;
         try
         {
-            contents = cast(ustring)std.file.read(filename);
+            contents = cast(ustring)file.myRead(filename);
         }
         catch (FileException e)
         {
