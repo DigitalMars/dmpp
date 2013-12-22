@@ -98,16 +98,8 @@ struct SrcFile
         }
 
         bool result = true;
-        if (!exists(filename))
-        {
-            result = false;
-            doesNotExist = true;
-        }
-        else try
-        {
-            contents = cast(ustring)file.myRead(filename);
-        }
-        catch (FileException e)
+        contents = cast(ustring)file.myRead(filename);
+        if (contents == null)
         {
             result = false;
             doesNotExist = true;

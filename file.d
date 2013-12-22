@@ -1,5 +1,5 @@
 // Written in the D programming language.
-// This is a copy of phobos/std/file.d, with a rewrite of the file reader.
+// This is derived from phobos/std/file.d, with a rewrite of the file reader.
 
 /**
 Utilities for manipulating files and scanning directories. Functions
@@ -40,75 +40,97 @@ else
 
 
 
-private T cenforce(T)(T condition, lazy const(char)[] name, string file = __FILE__, size_t line = __LINE__)
-{
-    if (!condition)
-    {
-      version (Windows)
-      {
-        throw new FileException(name, .GetLastError(), file, line);
-      }
-      else version (Posix)
-      {
-        throw new FileException(name, .errno, file, line);
-      }
-    }
-    return condition;
-}
-
-/* **********************************
- * Basic File operations.
- */
-
 /********************************************
 Read entire contents of file $(D name) and returns it as an untyped
 array. If the file size is larger than $(D upTo), only $(D upTo)
 bytes are read.
 
-Example:
-
-----
-import std.file, std.stdio;
-void main()
-{
-   auto bytes = cast(ubyte[]) read("filename", 5);
-   if (bytes.length == 5)
-       writefln("The fifth byte of the file is 0x%x", bytes[4]);
-}
-----
-
 Returns: Untyped array of bytes _read.
+        null if file doesn't exist.
 
-Throws: $(D FileException) on error.
  */
+
+/* With or without this on Windows things might be faster - I get ambiguous results
+ */
+//version = onestat;
+
 void[] myRead(in char[] name, size_t upTo = size_t.max)
 {
     version(Windows)
     {
+        auto namez = std.utf.toUTF16z(name);
+
+        /* Doing a stat to see if the file is there before attempting to read it
+         * turns out to be much faster.
+         */
+        version (onestat)
+        {
+            WIN32_FILE_ATTRIBUTE_DATA fad;
+            if (GetFileAttributesExW(namez, GET_FILEEX_INFO_LEVELS.GetFileExInfoStandard, &fad) == 0)
+                return null;
+            if (fad.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+                return null;
+
+            ULARGE_INTEGER li;
+            li.LowPart = fad.nFileSizeLow;
+            li.HighPart = fad.nFileSizeHigh;
+            auto size = cast(size_t)li.QuadPart;
+        }
+        else
+        {   // Two stats
+            auto attr = GetFileAttributesW(namez);
+            if (attr == 0xFFFF_FFFF || attr & FILE_ATTRIBUTE_DIRECTORY)
+                return null;
+        }
+
         alias TypeTuple!(GENERIC_READ,
                 FILE_SHARE_READ, (SECURITY_ATTRIBUTES*).init, OPEN_EXISTING,
                 FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
                 HANDLE.init)
             defaults;
-        auto h = CreateFileW(std.utf.toUTF16z(name), defaults);
+        auto h = CreateFileW(namez, defaults);
 
-        cenforce(h != INVALID_HANDLE_VALUE, name);
-        scope(exit) cenforce(CloseHandle(h), name);
-        auto size = GetFileSize(h, null);
-        cenforce(size != INVALID_FILE_SIZE, name);
+        if (h == INVALID_HANDLE_VALUE)
+            return null;
+        scope(exit) CloseHandle(h);
+
+        version (statsize)
+        {
+        }
+        else
+        {
+            auto size = GetFileSize(h, null);
+            if (size == INVALID_FILE_SIZE)
+                return null;
+        }
+
         size = min(upTo, size);
         auto buf = malloc(size + 1);
         assert(buf);
-        scope(failure) free(buf);
 
         DWORD numread = void;
-        cenforce(ReadFile(h, buf, size, &numread, null) == 1
-                && numread == size, name);
+        if (ReadFile(h, buf, size, &numread, null) != 1
+                || numread != size)
+        {
+            free(buf);
+            return null;
+        }
+
         (cast(ubyte*)buf)[size] = 0;            // sentinel at end
         return buf[0 .. size];
     }
     else version(Posix)
     {
+        auto namez = toStringz(name);
+
+        /* Doing a stat to see if the file is there before attempting to read it
+         * turns out to be much faster.
+         */
+        stat_t statbuf = void;
+        if (stat(namez, &statbuf) != 0 ||
+            (statbuf.st_mode & S_IFMT) != S_IFREG)
+            return null;
+
         // A few internal configuration parameters {
         enum size_t
             minInitialAlloc = 1024 * 4,
@@ -117,40 +139,47 @@ void[] myRead(in char[] name, size_t upTo = size_t.max)
             maxSlackMemoryAllowed = 1024;
         // }
 
-        immutable fd = core.sys.posix.fcntl.open(toStringz(name),
+        immutable fd = core.sys.posix.fcntl.open(namez,
                 core.sys.posix.fcntl.O_RDONLY);
-        cenforce(fd != -1, name);
-        scope(exit) core.sys.posix.unistd.close(fd);
+        if (fd == -1)
+            return null;
 
-        stat_t statbuf = void;
-        cenforce(fstat(fd, &statbuf) == 0, name);
+        scope(exit) core.sys.posix.unistd.close(fd);
 
         immutable initialAlloc = to!size_t(statbuf.st_size
             ? min(statbuf.st_size + 1, maxInitialAlloc)
             : minInitialAlloc);
 
-        auto result = malloc(initialAlloc);
+        auto result = malloc(initialAlloc + 1);
         assert(result);
         size_t result_length = initialAlloc;
-        scope(failure) free(result);
         size_t size = 0;
 
         for (;;)
         {
             immutable actual = core.sys.posix.unistd.read(fd, result + size,
                     min(result_length, upTo) - size);
-            cenforce(actual != -1, name);
+            if (actual == -1)
+            {
+                free(result);
+                return null;
+            }
             if (actual == 0) break;
             size += actual;
             if (size < result_length) continue;
             immutable newAlloc = size + sizeIncrement;
-            result = realloc(result, newAlloc);
+            result = realloc(result, newAlloc + 1);
             assert(result);
             result_length = newAlloc;
         }
 
-        return result_length - size >= maxSlackMemoryAllowed
-            ? realloc(result, size)[0 .. size]
-            : result[0 .. size];
+        result = result_length - size >= maxSlackMemoryAllowed
+            ? realloc(result, size + 1)
+            : result;
+
+        (cast(ubyte*)result)[size] = 0;            // sentinel at end
+        return result[0 .. size];
     }
+    else
+        static assert(0);
 }
