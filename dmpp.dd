@@ -63,7 +63,7 @@ $(OL
 
 Macros:
 TITLE=dmpp
-COPYRIGHT= Copyright (c) 2013 by $(LINK2 http://www.digitalmars.com, Digital Mars) All Rights Reserved
+COPYRIGHT= Copyright (c) 2013 by $(LINK2 http://www.digitalmars.com, Digital Mars) $(LINK2 http://boost.org/LICENSE_1_0.txt, Boost License 1.0)
 TABLE1 = <table border=1 cellpadding=4 cellspacing=0>$0</table>
 TABLE2 = <table border=1 cellpadding=4 cellspacing=0 class="table2"><caption>$1</caption>$+</table>
 TH=<th scope="col" class="table2">$0</th>

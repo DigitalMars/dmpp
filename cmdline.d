@@ -2,7 +2,7 @@
 /**
  * C preprocessor
  * Copyright: 2013 by Digital Mars
- * License: All Rights Reserved
+ * License: $(LINK2 http://boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors: Walter Bright
  */
 
@@ -51,7 +51,7 @@ Params parseCommandLine(string[] args)
         writeln(
 "C Preprocessor
 Copyright (c) 2013 by Digital Mars
-All Rights Reserved
+http://boost.org/LICENSE_1_0.txt
 Options:
   filename...       source file name(s)
   -D macro[=value]  define macro

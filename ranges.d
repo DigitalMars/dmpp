@@ -1,6 +1,9 @@
 
 /****
  * Generic ranges not found in Phobos.
+ * Copyright: 2013 by Digital Mars
+ * License: $(LINK2 http://boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * Authors: Walter Bright
  */
 
 module ranges;

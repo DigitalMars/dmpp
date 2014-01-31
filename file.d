@@ -10,9 +10,9 @@ to module $(LINK2 std_stdio.html,$(D std.stdio)).
 Macros:
 
 Copyright: Copyright Digital Mars 2007 - 2011.
-License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
-Authors:   $(WEB digitalmars.com, Walter Bright),
-           $(WEB erdani.org, Andrei Alexandrescu),
+License:   $(LINK2 http://boost.org/LICENSE_1_0.txt, Boost License 1.0).
+Authors:   $(LINK2 http://digitalmars.com, Walter Bright),
+           $(LINK2 http://erdani.org, Andrei Alexandrescu),
            Jonathan M Davis
  */
 module file;
