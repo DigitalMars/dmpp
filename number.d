@@ -287,97 +287,86 @@ R skipFloat(R, S)(R r, ref S s, bool hex, bool sawdot, bool isexponent)
 {
     alias Unqual!(ElementEncodingType!R) E;
 
-    if (r.empty)
-        goto Lreturn;
-
-    E get() { E c = cast(E)r.front; return c; }
-
-    E c = get();
-
-    bool isfloat = sawdot | isexponent;
-
-    if (isexponent)
-        goto Lisexponent;
-
-    if (sawdot)
-        goto Lsawdot;
-
-    // Leading '0x'
-    if (c == '0')
+    if (!r.empty)
     {
-        s.put(c);
-        r.popFront();
-        if (r.empty)
-            goto Lreturn;
-        c = get();
-        if (c == 'x' || c == 'X')
+        E get() { E c = cast(E)r.front; return c; }
+
+        E c = get();
+
+        bool isfloat = sawdot | isexponent;
+
+        if (isexponent)
+            goto Lisexponent;
+
+        if (sawdot)
+            goto Lsawdot;
+
+        // Leading '0x'
+        if (c == '0')
         {
             s.put(c);
             r.popFront();
-            hex = true;
             if (r.empty)
+                goto Lreturn;
+            c = get();
+            if (c == 'x' || c == 'X')
             {
-                err_fatal("hex digit(s) expected");
-                goto Lreturn;
+                s.put(c);
+                r.popFront();
+                hex = true;
+                if (r.empty)
+                {
+                    err_fatal("hex digit(s) expected");
+                    goto Lreturn;
+                }
+                c = get();
             }
-            c = get();
         }
-    }
 
-    // Digits to left of '.'
-    while (1)
-    {
-        if (c == '.')
+        // Digits to left of '.'
+        while (1)
         {
-            isfloat = true;
-            s.put(c);
-            r.popFront();
-            if (r.empty)
-                goto Lreturn;
-            c = get();
+            if (c == '.')
+            {
+                isfloat = true;
+                s.put(c);
+                r.popFront();
+                if (r.empty)
+                    goto Lreturn;
+                c = get();
+                break;
+            }
+            if (isDigit(c) || (hex && isHexDigit(c)))
+            {
+                s.put(c);
+                r.popFront();
+                if (r.empty)
+                    goto Lreturn;
+                c = get();
+                continue;
+            }
             break;
         }
-        if (isDigit(c) || (hex && isHexDigit(c)))
-        {
-            s.put(c);
-            r.popFront();
-            if (r.empty)
-                goto Lreturn;
-            c = get();
-            continue;
-        }
-        break;
-    }
 
-Lsawdot:
+    Lsawdot:
 
-    // Digits to right of '.'
-    while (1)
-    {
-        if (isDigit(c) || (hex && isHexDigit(c)))
+        // Digits to right of '.'
+        while (1)
         {
-            s.put(c);
-            r.popFront();
-            if (r.empty)
-                goto Lreturn;
-            c = get();
-            continue;
+            if (isDigit(c) || (hex && isHexDigit(c)))
+            {
+                s.put(c);
+                r.popFront();
+                if (r.empty)
+                    goto Lreturn;
+                c = get();
+                continue;
+            }
+            break;
         }
-        break;
-    }
 
-Lisexponent:
-    if (c == 'e' || c == 'E' || (hex && (c == 'p' || c == 'P')))
-    {
-        s.put(c);
-        r.popFront();
-        if (r.empty)
-        {
-            err_fatal("exponent digits missing");
-            goto Lreturn;
-        }
-        c = get();
-        if (c == '-' || c == '+')
+    Lisexponent:
+        if (c == 'e' || c == 'E' || (hex && (c == 'p' || c == 'P')))
         {
             s.put(c);
             r.popFront();
@@ -387,38 +376,50 @@ Lisexponent:
                 goto Lreturn;
             }
             c = get();
-        }
-        bool anyexp;
-        while (1)
-        {
-            if (isDigit(c) || (hex && isHexDigit(c)))
+            if (c == '-' || c == '+')
             {
-                r.popFront();
                 s.put(c);
-                anyexp = true;
+                r.popFront();
                 if (r.empty)
+                {
+                    err_fatal("exponent digits missing");
                     goto Lreturn;
+                }
                 c = get();
-                continue;
             }
-            if (!anyexp)
-                err_fatal("missing exponent");
-            break;
+            bool anyexp;
+            while (1)
+            {
+                if (isDigit(c) || (hex && isHexDigit(c)))
+                {
+                    r.popFront();
+                    s.put(c);
+                    anyexp = true;
+                    if (r.empty)
+                        goto Lreturn;
+                    c = get();
+                    continue;
+                }
+                if (!anyexp)
+                    err_fatal("missing exponent");
+                break;
+            }
         }
-    }
-    else if (hex && isfloat)
-        err_fatal("exponent required for hex float");
+        else if (hex && isfloat)
+            err_fatal("exponent required for hex float");
 
-    if (c == 'f' || c == 'F' || c == 'l' || c == 'L')
-    {
-        s.put(c);
-        r.popFront();
-        if (r.empty)
-            goto Lreturn;
-        c = get();
-    }
+        if (c == 'f' || c == 'F' || c == 'l' || c == 'L')
+        {
+            s.put(c);
+            r.popFront();
+            if (r.empty)
+                goto Lreturn;
+            c = get();
+        }
 
-Lreturn:
+    Lreturn:
+        ;
+    }
     return r;
 }
 

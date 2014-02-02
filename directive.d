@@ -163,6 +163,7 @@ void macrosDefine(ustring def)
         text = text.macroReplacementList(objectLike, parameters);
     }
 
+    {
     uint flags = Id.IDpredefined;
     if (variadic)
         flags |= Id.IDdotdotdot;
@@ -173,6 +174,7 @@ void macrosDefine(ustring def)
     if (!m)
     {
         err_fatal("redefinition of macro %s", cast(string)id);
+    }
     }
     return;
 
@@ -462,9 +464,11 @@ bool parseDirective(R)(ref R r)
                         return true;
                     }
 
+                    {
                     auto m = Id.search(r.idbuf[]);
                     cond = (m && m.flags & Id.IDmacro);
                     //if (cond) writefln("ifdef %s", cast(string)m.name);
+                    }
 
                     r.src.ifstack.put(CONDif);
                 Ldef:
@@ -687,36 +691,36 @@ bool parseDirective(R)(ref R r)
 
             r.needStringLiteral();
             r.popFront();
-            if (r.empty || r.front == TOK.eol)
-                goto LlineDone;
-            while (!r.empty && r.front == TOK.string)
+            if (!(r.empty || r.front == TOK.eol))
             {
-                auto s = cast(string)r.getStringLiteral();
-                stringbuf.put(s);       // append to stringbuf[]
-                r.popFront();
-            }
-
-            // s is the new "source file"
-            auto srcfile = SrcFile.lookup(stringbuf[].idup);
-            stringbuf.free();
-            srcfile.contents = sf.loc.srcFile.contents;
-            srcfile.includeGuard = sf.loc.srcFile.includeGuard;
-            srcfile.once = sf.loc.srcFile.once;
-
-            sf.loc.srcFile = srcfile;
-
-            if (linemarker)
-            {
-                while (!r.empty && r.front == TOK.integer)
+                while (!r.empty && r.front == TOK.string)
                 {
+                    auto s = cast(string)r.getStringLiteral();
+                    stringbuf.put(s);       // append to stringbuf[]
                     r.popFront();
                 }
+
+                // s is the new "source file"
+                auto srcfile = SrcFile.lookup(stringbuf[].idup);
+                stringbuf.free();
+                srcfile.contents = sf.loc.srcFile.contents;
+                srcfile.includeGuard = sf.loc.srcFile.includeGuard;
+                srcfile.once = sf.loc.srcFile.once;
+
+                sf.loc.srcFile = srcfile;
+
+                if (linemarker)
+                {
+                    while (!r.empty && r.front == TOK.integer)
+                    {
+                        r.popFront();
+                    }
+                }
+                if (r.empty || r.front != TOK.eol)
+                {
+                    err_fatal("end of line expected after linemarker");
+                }
             }
-            if (r.empty || r.front != TOK.eol)
-            {
-                err_fatal("end of line expected after linemarker");
-            }
-        LlineDone:
             if (!linemarker)
             {
                 r.src.expanded.on();

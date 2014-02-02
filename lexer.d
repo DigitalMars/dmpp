@@ -532,9 +532,10 @@ struct Lexer(R) if (isInputRange!R)
                     }
                     else
                     {
+                        Id* m = void;
                         if (expanded && !src.empty && src.isExpanded())
                             goto Lisident;
-                        auto m = Id.search(idbuf[]);
+                        m = Id.search(idbuf[]);
                         if (m && m.flags & Id.IDmacro && !noExpand)
                         {
                             assert(!(m.flags & Id.IDinuse));
