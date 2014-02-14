@@ -121,8 +121,13 @@ struct Id
         auto m = pool(name);
         if (m.flags & IDmacro)
         {
-            if ((m.flags ^ flags) & (IDpredefined | IDdotdotdot | IDfunctionLike) ||
+            if ((m.flags ^ flags) & (IDdotdotdot | IDfunctionLike) ||
                 m.parameters != parameters ||
+                m.text != text)
+            {
+                return null;
+            }
+            if (((m.flags ^ flags) & IDpredefined) &&
                 m.text != text)
             {
                 return null;
