@@ -66,8 +66,12 @@ void lexMacroParameters(R)(ref R r, out bool variadic, out ustring[] parameters)
                         continue;
 
                     case TOK.dotdotdot:
-                        err_fatal("comma must precede ...");
-                        return;
+                        /* This is the Standard way:
+                         *    err_fatal("comma must precede ...");
+                         *    return;
+                         * But allow the GNU CPP extension:
+                         */
+                        goto Lvariadic;
 
                     case TOK.rparen:
                         continue;
@@ -78,8 +82,9 @@ void lexMacroParameters(R)(ref R r, out bool variadic, out ustring[] parameters)
                 }
 
             case TOK.dotdotdot:
-                variadic = true;
                 params ~= cast(ustring)"__VA_ARGS__";
+            Lvariadic:
+                variadic = true;
                 r.popFrontNoExpand();
                 if (r.front != TOK.rparen)
                 {
