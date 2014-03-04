@@ -129,7 +129,7 @@ struct Expanded(R)
         ++lineNumber;
     }
 
-    void put(ustring s)
+    void put(const(uchar)[] s)
     {
         //writefln("expanded.put('%s')", cast(string)s);
         /* This will always be an identifier string, so we can skip
