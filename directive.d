@@ -430,6 +430,12 @@ bool parseDirective(R)(ref R r)
 
                 case "if":
                 {
+                    {
+                    auto csf = r.src.currentSourceFile();
+                    if (csf)
+                        csf.seenTokens = true;
+                    }
+
                     // Turn off expanded output so this line is not emitted
                     r.src.expanded.off();
                     r.src.expanded.eraseLine();
@@ -457,6 +463,12 @@ bool parseDirective(R)(ref R r)
 
                 case "ifdef":
                 {
+                    {
+                    auto csf = r.src.currentSourceFile();
+                    if (csf)
+                        csf.seenTokens = true;
+                    }
+
                     // Turn off expanded output so this line is not emitted
                     r.src.expanded.off();
                     r.src.expanded.eraseLine();
