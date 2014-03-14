@@ -100,3 +100,12 @@ void err_fatal(T...)(T args)
     app.formattedWrite(args);
     throw new Exception(app.data);
 }
+
+void err_warning(T...)(T args)
+{
+    auto app = appender!string();
+    app.formattedWrite(args);
+    stderr.write("warning: ");
+    stderr.writeln(app.data);
+}
+

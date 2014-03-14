@@ -428,6 +428,19 @@ bool parseDirective(R)(ref R r)
                     err_fatal("%s", cast(string)msg);
                     return true;
 
+                case "warning":
+                    // Turn off expanded output so this line is not emitted
+                    r.src.expanded.off();
+                    r.src.expanded.eraseLine();
+
+                    auto msg = r.src.restOfLine();
+                    err_warning("%s", cast(string)msg);
+
+                    r.src.expanded.on();
+                    r.src.expanded.put('\n');
+                    r.src.expanded.put(r.src.front);
+                    return true;
+
                 case "if":
                 {
                     {
