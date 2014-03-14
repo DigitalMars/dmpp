@@ -101,11 +101,12 @@ void err_fatal(T...)(T args)
     throw new Exception(app.data);
 }
 
-void err_warning(T...)(T args)
+void err_warning(T...)(Loc loc, T args)
 {
     auto app = appender!string();
     app.formattedWrite(args);
     stderr.write("warning: ");
+    loc.write(&stderr);
     stderr.writeln(app.data);
 }
 

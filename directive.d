@@ -21,6 +21,7 @@ import skip;
 import sources;
 import stringlit;
 import textbuf;
+import loc;
 
 enum : ubyte
 {
@@ -434,7 +435,8 @@ bool parseDirective(R)(ref R r)
                     r.src.expanded.eraseLine();
 
                     auto msg = r.src.restOfLine();
-                    err_warning("%s", cast(string)msg);
+                    auto csf = r.src.currentSourceFile();
+                    err_warning(csf ? csf.loc : Loc(), "%s", cast(string)msg);
 
                     r.src.expanded.on();
                     r.src.expanded.put('\n');
