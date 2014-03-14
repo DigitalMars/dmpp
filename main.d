@@ -103,10 +103,8 @@ void err_fatal(T...)(T args)
 
 void err_warning(T...)(Loc loc, T args)
 {
-    auto app = appender!string();
-    app.formattedWrite(args);
-    stderr.write("warning: ");
     loc.write(&stderr);
-    stderr.writeln(app.data);
+    stderr.write("warning: ");
+    stderr.writefln(args);
 }
 
