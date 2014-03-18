@@ -272,7 +272,10 @@ R skipRawStringLiteral(alias error = err_fatal, R, S)(R r, ref S s)
                     if (c == '"')
                         return r;
                     else
+                    {
                         rawstate = RAW.string;
+                        goto case RAW.string;
+                    }
                 }
                 else if (c == ')')
                 {
@@ -299,6 +302,11 @@ unittest
     auto r = "a(bcd\")b\")a\"e".skipRawStringLiteral(a);
     assert(!r.empty && r.front == 'e');
     assert(a[] == "a(bcd\")b\")a\"");
+
+    a.init();
+    r = "(([^\\s]*)\\s+(.*))\"e".skipRawStringLiteral(a);
+    assert(!r.empty && r.front == 'e');
+    assert(a[] == "(([^\\s]*)\\s+(.*))\"");
 }
 
 
