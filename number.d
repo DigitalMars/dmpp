@@ -110,7 +110,6 @@ R lexNumber(R)(R r, out ppint_t result, out bool isunsigned, out bool isinteger)
 
             case 'a': .. case 'f':
             case 'A': .. case 'F':
-                r.popFront();
                 if (radix != 16)
                 {
                     if (c == 'e' || c == 'E')
@@ -123,6 +122,7 @@ R lexNumber(R)(R r, out ppint_t result, out bool isunsigned, out bool isinteger)
                     }
                     err_fatal("%s digit expected not '%s'", radix == 8 ? "octal" : "decimal", cast(char)c);
                 }
+                r.popFront();
                 if (c >= 'a')
                     d = c + 10 - 'a';
                 else
@@ -276,6 +276,19 @@ unittest
     assert(number == 0x8000_0000_0000_0000);
     assert(isunsigned);
     assert(s.empty);
+
+    s = "1ff";
+    s = s.lexNumber(number, isunsigned, isinteger);
+    assert(!isinteger);
+    assert(s == "f");
+
+    string[] floats = ["1f", "5e+08", "1.4", "89.", "0xep+1", "1E9"];
+    foreach (f; floats)
+    {
+        f = f.lexNumber(number, isunsigned, isinteger);
+        assert(!isinteger);
+        assert(f.empty);
+    }
 }
 
 /***********************************
@@ -447,6 +460,10 @@ unittest
     assert(s.empty);
 
     s = "e123";
+    s = s.skipFloat(bitbucket, false, false, true);
+    assert(s.empty);
+
+    s = "e+08";
     s = s.skipFloat(bitbucket, false, false, true);
     assert(s.empty);
 }
