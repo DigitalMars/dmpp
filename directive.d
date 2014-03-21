@@ -413,7 +413,7 @@ bool parseDirective(R)(ref R r)
 
                     auto m = Id.search(r.idbuf[]);
                     if (m)
-                        m.flags &= ~Id.IDmacro;
+                        m.flags &= ~(Id.IDmacro | Id.IDdotdotdot | Id.IDfunctionLike);
 
                     r.popFront();
                     if (r.front != TOK.eol)
