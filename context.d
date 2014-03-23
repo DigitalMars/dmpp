@@ -410,7 +410,7 @@ struct Context(R)
                 s.loc.srcFile.includeGuard = s.includeGuard;
             }
 
-            if (last && s.loc.srcFile.once)
+            if (last && (s.loc.srcFile.once || s.loc.srcFile.includeGuard))
                 s.loc.srcFile.freeContents();   // won't need the contents anymore
         }
         stack.psource = stack.psource.prev;
@@ -706,7 +706,7 @@ struct Source
         loc.srcFile = sf;
         loc.lineNumber = 0;
         loc.isSystem = isSystem;
-        input = sf.contents;
+        input = *sf.contents;
         isFile = true;
         includeGuard = null;
         this.pathIndex = pathIndex;
@@ -760,7 +760,7 @@ version (unittest)
 
         // Create a fake source file with contents
         auto sf = SrcFile.lookup("test.c");
-        sf.contents = cast(ustring)src;
+        sf.contents = cast(ustring*)&src;
 
         context.localStart(sf, &outbuf);
 
