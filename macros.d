@@ -102,17 +102,20 @@ ustring macroReplacementList(R)(ref R text, bool objectLike, ustring[] parameter
                 /* Skip over character literals and string literals without
                  * examining their insides
                  */
-                if (outbuf.last() == 'R')
-                {
-                    outbuf.put(c);
-                    text = text.skipRawStringLiteral(outbuf);
-                }
-                else
-                {
-                    outbuf.put(c);
-                    text = text.skipStringLiteral(outbuf);
-                }
+                outbuf.put(c);
+                text = text.skipStringLiteral(outbuf);
                 continue;
+
+            case 'R':
+                if (cast(E)text.front == '"')
+                {
+                    text.popFront();
+                    outbuf.put('R');
+                    outbuf.put('"');
+                    text = text.skipRawStringLiteral(outbuf);
+                    continue;
+                }
+                goto default;
 
             case '\'':
                 outbuf.put(c);
@@ -176,21 +179,38 @@ ustring macroReplacementList(R)(ref R text, bool objectLike, ustring[] parameter
                 break;
 
             default:
-                if (parameters.length && isIdentifierStart(c))
+                if (isIdentifierStart(c))
                 {
-                    StaticArrayBuffer!(uchar, 1024) id = void;
-                    id.init();
-                    id.put(c);
-                    text = text.inIdentifier(id);
-                    auto argi = countUntil(parameters, id[]);
-                    if (argi == -1)
+                    if (parameters.length)
                     {
-                        outbuf.put(id[]);
+                        StaticArrayBuffer!(uchar, 1024) id = void;
+                        id.init();
+                        id.put(c);
+                        text = text.inIdentifier(id);
+                        auto argi = countUntil(parameters, id[]);
+                        if (argi == -1)
+                        {
+                            outbuf.put(id[]);
+                        }
+                        else
+                        {
+                            outbuf.put(ESC.start);
+                            outbuf.put(cast(uchar)(argi + 1));
+                        }
                     }
                     else
                     {
-                        outbuf.put(ESC.start);
-                        outbuf.put(cast(uchar)(argi + 1));
+                        outbuf.put(c);
+                        while (1)
+                        {
+                            E c2 = cast(E)text.front;
+                            if (isAlphaNum(c2) || c2 == '_' || c2 == '$')
+                            {   text.popFront();
+                                outbuf.put(c2);
+                            }
+                            else
+                                break;
+                        }
                     }
                     continue;
                 }
