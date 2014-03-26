@@ -410,7 +410,7 @@ struct Context(R)
                 s.loc.srcFile.includeGuard = s.includeGuard;
             }
 
-            if (last && (s.loc.srcFile.once || s.loc.srcFile.includeGuard))
+            if (last && (s.loc.srcFile.once /*|| s.loc.srcFile.includeGuard*/))
                 s.loc.srcFile.freeContents();   // won't need the contents anymore
         }
         stack.psource = stack.psource.prev;
