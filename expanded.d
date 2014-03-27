@@ -56,7 +56,7 @@ struct Expanded(R)
 
     void put(uchar c)
     {
-        //writefln("expanded.put('%c', %s)", c, noexpand);
+        //writefln("expanded.put(%02x '%s' %s)", c, cast(char)(c < ' ' ? '?' : c), noexpand);
         if (c != ESC.space && !noexpand)
         {
             if (lineBuffer.length && lineBuffer.last() == '\n')
@@ -102,10 +102,10 @@ struct Expanded(R)
                         lineBuffer.put('\n');
                     else
                     {
-                        if (lineNumber + 30 < linnum)
+                        if (lineNumber + 30 > linnum)
                         {
                             foreach (i; lineNumber .. linnum)
-                                lineBuffer.put('\n');
+                                foutr.put('\n');
                         }
                         else
                         {
