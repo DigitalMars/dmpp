@@ -1261,11 +1261,13 @@ private R macroScanArgument(R, T)(R r1, bool va_args, ref T outbuf)
     outbuf.put(0);
 
     int parens;
+  Loop:
     while (1)
     {
         if (r.empty)
             break;
         auto c = r.front;
+        //writefln("c = '%c', x%02x", cast(char)((c < ' ') ? '?' : c), c);
         switch (c)
         {
             case '(':
@@ -1331,6 +1333,9 @@ private R macroScanArgument(R, T)(R r1, bool va_args, ref T outbuf)
                     continue;
                 }
                 break;
+
+            case 0:
+                break Loop;
 
             default:
                 break;
