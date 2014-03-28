@@ -67,27 +67,31 @@ unittest
 
 R skipCComment(alias error = err_fatal, R)(R r) if (isInputRange!R)
 {
-    bool star;
-    while (!r.empty)
+outer:
+    for (;;)
     {
-        auto c = r.front;
-        r.popFront();
-        switch (c)
-        {
-            case '*':
-                star = true;
-                break;
-
-            case '/':
-                if (star)
-                    return r;
-            default:
-                star = false;
-                break;
-        }
+      if (r.empty)
+          break;
+      for (;;)
+      {
+          if (r.front != '*')
+          {
+              // Short path
+              r.popFront();
+              break;
+          }
+          r.popFront();
+          if (r.empty)
+              break outer;
+          if (r.front == '/')
+          {
+              r.popFront();
+              return r;
+          }
+      }
     }
     error("/* comment is not closed with */");
-    return r;
+    assert(0);
 }
 
 unittest
