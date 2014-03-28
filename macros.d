@@ -1224,6 +1224,8 @@ private R macroScanArgument(R, T)(R r1, bool va_args, ref T outbuf)
 
     static if (isContext)
     {
+        auto loc = r1.loc();
+
         static struct Chain
         {
             R r1;
@@ -1343,7 +1345,11 @@ private R macroScanArgument(R, T)(R r1, bool va_args, ref T outbuf)
         outbuf.put(cast(uchar)c);
         r.popFront();
     }
-    err_fatal("premature end of macro argument");
+    static if (isContext)
+        err_fatal("premature end of macro argument from %s(%s)",
+                loc.srcFile ? loc.srcFile.filename : "", loc.lineNumber);
+    else
+        err_fatal("premature end of macro argument");
     return r1;
 
   LendOfArg:
