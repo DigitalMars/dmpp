@@ -558,14 +558,7 @@ R readSrcLine(R, S)(R r, ref S s)
         E c = *p++;
         if (c == '\n')
             break;
-/+
-        else if (c == 0)
-        {
-            --p;
-            break;
-        }
-+/
-        else if (c != '\r')
+        else //if (c != '\r')
             s.put(c);
     }
     s.put('\n');
@@ -742,9 +735,14 @@ struct Source
         {
             ++loc.lineNumber;
             input = input.readSrcLine(lineBuffer);
-            if (lineBuffer.length >= 2 &&
-                lineBuffer[lineBuffer.length - 2] == '\\')
+            auto len = lineBuffer.length;
+            uchar c = void;
+            if (len >= 2 &&
+                ((c = lineBuffer[len - 2]) == '\\' ||
+                 (c == '\r' && len >= 3 && lineBuffer[len - 3] == '\\')))
             {
+                if (c == '\r')
+                    lineBuffer.pop();
                 lineBuffer.pop();
                 lineBuffer.pop();
             }

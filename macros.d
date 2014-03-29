@@ -815,7 +815,7 @@ void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
                 break;
 
             case 0:
-assert(0);
+                assert(0);
                 goto Ldone;
 
             case '.':
