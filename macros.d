@@ -815,6 +815,7 @@ void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
                 break;
 
             case 0:
+assert(0);
                 goto Ldone;
 
             case '.':
@@ -1232,7 +1233,7 @@ private R macroScanArgument(R, T)(R r1, bool va_args, ref T outbuf)
 
             @property bool empty()
             {
-                bool b = r1.empty && r1.stack.prev && r1.stack.prev.empty;
+                bool b = r1.empty && (!r1.stack.prev || r1.stack.prev.empty);
                 return b;
             }
 
@@ -1269,7 +1270,7 @@ private R macroScanArgument(R, T)(R r1, bool va_args, ref T outbuf)
         if (r.empty)
             break;
         auto c = r.front;
-        //writefln("c = '%c', x%02x", cast(char)((c < ' ') ? '?' : c), c);
+        //writefln("%s c = '%c', x%02x", isContext, cast(char)((c < ' ') ? '?' : c), c);
         switch (c)
         {
             case '(':
@@ -1337,6 +1338,7 @@ private R macroScanArgument(R, T)(R r1, bool va_args, ref T outbuf)
                 break;
 
             case 0:
+                assert(0);
                 break Loop;
 
             default:
