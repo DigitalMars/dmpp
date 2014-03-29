@@ -1049,7 +1049,10 @@ assert(0);
                             r.push(ESC.brk);
                         }
 
-                        r.push(rs.empty ? cast(ustring)("" ~ ESC.space) : rs);
+                        if (rs.empty)
+                            r.push(ESC.space);
+                        else
+                            r.push(rs);
                         r.setExpanded();
                         r.push(ESC.brk);
                         r.popFront();
