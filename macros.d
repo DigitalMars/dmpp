@@ -936,8 +936,7 @@ assert(0);
                         {   // Predefined macro
                             outbuf.setLength(len);      // remove id from outbuf
                             r.unget();
-                            auto p = ctx.predefined(m);
-                            r.push(p);
+                            r.pushPredefined(m);
                             r.popFront();
                             continue;
                         }
