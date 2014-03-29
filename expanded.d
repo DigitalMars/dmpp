@@ -103,6 +103,7 @@ struct Expanded(R)
                     else
                     {
                         if (lineNumber + 30 > linnum)
+                        //if (lineNumber + (s.loc.srcFile ? s.loc.srcFile.filename.length + 10 : 30) > linnum)
                         {
                             foreach (i; lineNumber .. linnum)
                                 foutr.put('\n');
