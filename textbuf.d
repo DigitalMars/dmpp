@@ -62,7 +62,7 @@ struct Textbuf(T, string id = null)
     /******
      * Use this to retrieve the result.
      */
-    T[] opSlice(size_t lwr, size_t upr)
+    T[] opSlice(size_t lwr, size_t upr) pure
     {
         assert(lwr <= buflen);
         assert(upr <= buflen);
@@ -70,38 +70,38 @@ struct Textbuf(T, string id = null)
         return buf[lwr .. upr];
     }
 
-    T[] opSlice()
+    T[] opSlice() pure
     {
         assert(i <= buflen);
         return buf[0 .. i];
     }
 
-    T opIndex(size_t i)
+    T opIndex(size_t i) const pure
     {
         assert(i < buflen);
         return buf[i];
     }
 
-    void initialize() { i = 0; }
+    void initialize() pure { i = 0; }
 
-    T last()
+    T last() const pure
     {
         assert(i - 1 < buflen);
         return buf[i - 1];
     }
 
-    T pop()
+    T pop() pure
     {
         assert(i - 1 < buflen);
         return buf[--i];
     }
 
-    @property size_t length()
+    @property size_t length() const pure
     {
         return i;
     }
 
-    void setLength(size_t i)
+    void setLength(size_t i) pure
     {
         assert(i < buflen);
         this.i = cast(uint)i;
