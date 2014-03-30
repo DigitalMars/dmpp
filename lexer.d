@@ -517,7 +517,7 @@ struct Lexer(R) if (isInputRange!R)
                             src.expanded.off();
                         }
                     }
-                    idbuf.init();
+                    idbuf.initialize();
                     src = src.inIdentifier(idbuf);
                 Lident:
                     if (noMacroExpand)
@@ -696,7 +696,7 @@ struct Lexer(R) if (isInputRange!R)
                             src.expanded.off();
                         }
                     }
-                    idbuf.init();
+                    idbuf.initialize();
                     src = src.inIdentifier(idbuf);
                     if (!src.empty)
                     {

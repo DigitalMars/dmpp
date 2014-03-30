@@ -37,7 +37,7 @@ struct StaticArrayBuffer(E, size_t N)
     size_t i;
     E[N] arr = void;
 
-    void init() { i = 0; }
+    void initialize() { i = 0; }
 
     void put(E e)
     {
@@ -58,7 +58,7 @@ struct StaticArrayBuffer(E, size_t N)
 unittest
 {
     StaticArrayBuffer!(ubyte, 2) buf = void;
-    buf.init();
+    buf.initialize();
     buf.put('a');
     buf.put('b');
 //writefln("'%s'", buf.get());
