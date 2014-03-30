@@ -1228,40 +1228,8 @@ private R macroScanArgument(R, T)(R r1, bool va_args, ref T outbuf)
     static if (isContext)
     {
         auto loc = r1.loc();
-
-        static struct Chain
-        {
-            R r1;
-
-            @property bool empty()
-            {
-                bool b = r1.empty && (!r1.stack.prev || r1.stack.prev.empty);
-                return b;
-            }
-
-            @property E front()
-            {
-                E c = r1.empty && r1.stack.prev ? cast(E)r1.stack.prev.front : cast(E)r1.front;
-                return c;
-            }
-
-            void popFront()
-            {
-                if (r1.empty)
-                {
-                    if (r1.stack.prev)
-                        r1.stack.prev.popFront();
-                }
-                else
-                    r1.popFront();
-            }
-        }
-
-        Chain r;
-        r.r1 = r1;
     }
-    else
-        alias r1 r;
+    alias r1 r;
 
     outbuf.put(0);
 

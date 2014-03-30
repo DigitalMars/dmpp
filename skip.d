@@ -391,7 +391,7 @@ unittest
 
 
 R inIdentifier(R, S)(R r, ref S s)
-        if (isInputRange!R && isOutputRange!(S,ElementEncodingType!R))
+        if (isInputRange!R && isOutputRange!(S,Unqual!(ElementEncodingType!R)))
 {
     while (!r.empty)
     {
