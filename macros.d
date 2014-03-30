@@ -1528,7 +1528,7 @@ unittest
     StaticArrayBuffer!(uchar, 1024) buf = void;
 
     buf.init();
-    auto s = cast(ustring)"";
+    auto s = cast(ustring)"\n";
     buf.writePreprocessedLine(s);
     assert(buf[] == "\n");
 
@@ -1536,34 +1536,34 @@ unittest
     s = cast(ustring)"\r\na b\x07";
     buf.writePreprocessedLine(s);
 //writefln("|%s| %s", buf[], buf[].length);
-    assert(buf[] == "a b\x07\n");
+    assert(buf[] == "\n");
 
     buf.init();
-    s = cast(ustring)("" ~ ESC.brk ~ "");
+    s = cast(ustring)("" ~ ESC.brk ~ "\n");
     buf.writePreprocessedLine(s);
 //writefln("|%s| %s", buf[], buf[].length);
     assert(buf[] == "\n");
 
     buf.init();
-    s = cast(ustring)("" ~ ESC.brk ~ ESC.brk ~ ESC.brk ~ "");
+    s = cast(ustring)("" ~ ESC.brk ~ ESC.brk ~ ESC.brk ~ "\n");
     buf.writePreprocessedLine(s);
 //writefln("|%s| %s", buf[], buf[].length);
     assert(buf[] == "\n");
 
     buf.init();
-    s = cast(ustring)("a" ~ ESC.brk ~ ESC.brk ~ ESC.brk ~ "");
+    s = cast(ustring)("a" ~ ESC.brk ~ ESC.brk ~ ESC.brk ~ "\n");
     buf.writePreprocessedLine(s);
 //writefln("|%s| %s", buf[], buf[].length);
     assert(buf[] == "a\n");
 
     buf.init();
-    s = cast(ustring)("a" ~ ESC.brk ~ ESC.brk ~ "b" ~ ESC.brk ~ "+");
+    s = cast(ustring)("a" ~ ESC.brk ~ ESC.brk ~ "b" ~ ESC.brk ~ "+\n");
     buf.writePreprocessedLine(s);
 //writefln("|%s| %s", buf[], buf[].length);
     assert(buf[] == "a b+\n");
 
     buf.init();
-    s = cast(ustring)("+" ~ ESC.brk ~ "+" ~ ESC.brk ~ "(");
+    s = cast(ustring)("+" ~ ESC.brk ~ "+" ~ ESC.brk ~ "(\n");
     buf.writePreprocessedLine(s);
 //writefln("|%s| %s", buf[], buf[].length);
     assert(buf[] == "+ +(\n");
