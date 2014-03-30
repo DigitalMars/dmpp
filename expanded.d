@@ -21,16 +21,15 @@ import textbuf;
 
 struct Expanded(R)
 {
-    Context!R* ctx;
-
-    // Expanded output file
-    uchar[1000] tmpbuf2 = void;
-    Textbuf!(uchar,"exp") lineBuffer = void;
-
-    R* foutr;
-
     int noexpand = 0;
     int lineNumber = 1;                 // line number of expanded output
+
+    Context!R* ctx;
+    R* foutr;
+
+    // Expanded output file
+    Textbuf!(uchar,"exp") lineBuffer = void;
+    uchar[1000] tmpbuf2 = void;
 
     void off() { ++noexpand; }
     void on()  { --noexpand; assert(noexpand >= 0); }
@@ -68,7 +67,8 @@ struct Expanded(R)
 
     void put2()
     {
-        if (lineBuffer[0] != '\n' && lineBuffer[0] != '\r')
+        uchar c = lineBuffer[0];
+        if (c != '\n' && c != '\r')
         {
             auto s = ctx.currentSourceFile();
             if (s)

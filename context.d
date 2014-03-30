@@ -253,10 +253,10 @@ struct Context(R)
     void popFront()
     {
         auto s = stack.psource;
-        if (!s.ptext.empty)
+        if (s.ptext.length)
         {
-            auto c = s.ptext.front;
-            s.ptext.popFront();
+            auto c = s.ptext[0];
+            s.ptext = s.ptext[1 .. $];
             stack.xc = c;
             expanded.put(c);
         }
@@ -269,7 +269,7 @@ struct Context(R)
         while (1)
         {
             auto s = stack.psource;
-            if (s.ptext.empty)
+            if (s.ptext.length == 0)
             {
                 if (s.isFile && !s.input.empty)
                 {
@@ -285,8 +285,8 @@ struct Context(R)
             }
             else
             {
-                stack.xc = s.ptext.front;
-                s.ptext.popFront();
+                stack.xc = s.ptext[0];
+                s.ptext = s.ptext[1 .. $];
             }
             expanded.put(stack.xc);
             break;
@@ -588,10 +588,10 @@ struct SourceStack
     void popFront()
     {
         auto s = psource;
-        if (!s.ptext.empty)
+        if (s.ptext.length)
         {
-            xc = s.ptext.front;
-            s.ptext.popFront();
+            xc = s.ptext[0];
+            s.ptext = s.ptext[1 .. $];
         }
         else
             popFront2();
@@ -602,10 +602,10 @@ struct SourceStack
         while (1)
         {
             auto s = psource;
-            if (!s.ptext.empty)
+            if (s.ptext.length)
             {
-                xc = s.ptext.front;
-                s.ptext.popFront();
+                xc = s.ptext[0];
+                s.ptext = s.ptext[1 .. $];
             }
             else
             {
