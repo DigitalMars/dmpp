@@ -396,12 +396,19 @@ R inIdentifier(R, S)(R r, ref S s)
     while (!r.empty)
     {
         auto c = cast(ElementEncodingType!R)r.front;
-        if (isAlphaNum(c) || c == '_' || c == '$')
+        if ((c >= '0' || c == '$') &&
+            (c <= '9' || c >= 'A')  &&
+            (c <= 'Z' || c >= 'a' || c == '_') &&
+            (c <= 'z'))
         {
+            //assert(isAlphaNum(c) || c == '_' || c == '$');
             s.put(c);
         }
         else
+        {
+            //assert(!(isAlphaNum(c) || c == '_' || c == '$'));
             break;
+        }
         r.popFront();
     }
     return r;
