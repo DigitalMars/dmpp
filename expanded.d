@@ -95,27 +95,21 @@ struct Expanded(R)
                         s.loc.linemarker(foutr);
                         ctx.lastloc = s.loc;
                     }
+                    lineNumber = linnum;
                 }
                 else if (linnum != lineNumber)
                 {
-                    if (linnum == lineNumber + 1)
-                        lineBuffer.put('\n');
+                    if (lineNumber + 30 > linnum)
+                    {
+                        foreach (i; lineNumber .. linnum)
+                            foutr.put('\n');
+                    }
                     else
                     {
-                        if (lineNumber + 30 > linnum)
-                        //if (lineNumber + (s.loc.srcFile ? s.loc.srcFile.filename.length + 10 : 30) > linnum)
-                        {
-                            foreach (i; lineNumber .. linnum)
-                                foutr.put('\n');
-                        }
-                        else
-                        {
-//writeln("test3");
-                            s.loc.linemarker(foutr);
-                        }
+                        s.loc.linemarker(foutr);
                     }
+                    lineNumber = linnum;
                 }
-                lineNumber = linnum;
             }
             else if (ctx.uselastloc && ctx.lastloc.srcFile)
             {
@@ -124,7 +118,6 @@ struct Expanded(R)
             }
         }
         ctx.uselastloc = false;
-        lineBuffer.put(0);              // add sentinel
         foutr.writePreprocessedLine(lineBuffer[]);
         lineBuffer.initialize();
         ++lineNumber;

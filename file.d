@@ -56,6 +56,9 @@ Returns: Untyped array of bytes _read.
 
 void[] myRead(in char[] name, size_t upTo = size_t.max)
 {
+    enum SPAD = 16;     // only need 2, the rest is to align the buffer
+    enum EPAD = 2;
+
     void* result = null;
 
     version(Windows)
@@ -107,11 +110,11 @@ void[] myRead(in char[] name, size_t upTo = size_t.max)
         }
 
         size = min(upTo, size);
-        auto buf = malloc(size + 2);
+        auto buf = malloc(size + SPAD + EPAD);
         assert(buf);
 
         DWORD numread = void;
-        if (ReadFile(h, buf, size, &numread, null) != 1
+        if (ReadFile(h, buf + SPAD, size, &numread, null) != 1
                 || numread != size)
         {
             free(buf);
@@ -150,14 +153,14 @@ void[] myRead(in char[] name, size_t upTo = size_t.max)
             ? min(statbuf.st_size + 1, maxInitialAlloc)
             : minInitialAlloc);
 
-        auto result = malloc(initialAlloc + 2);
+        auto result = malloc(initialAlloc + SPAD + EPAD);
         assert(result);
         size_t result_length = initialAlloc;
         size_t size = 0;
 
         for (;;)
         {
-            immutable actual = core.sys.posix.unistd.read(fd, result + size,
+            immutable actual = core.sys.posix.unistd.read(fd, result + size + SPAD,
                     min(result_length, upTo) - size);
             if (actual == -1)
             {
@@ -168,34 +171,37 @@ void[] myRead(in char[] name, size_t upTo = size_t.max)
             size += actual;
             if (size < result_length) continue;
             immutable newAlloc = size + sizeIncrement;
-            result = realloc(result, newAlloc + 2);
+            result = realloc(result, newAlloc + SPAD + EPAD);
             assert(result);
             result_length = newAlloc;
         }
 
         result = result_length - size >= maxSlackMemoryAllowed
-            ? realloc(result, size + 2)
+            ? realloc(result, size + SPAD + EPAD)
             : result;
     }
     else
         static assert(0);
 
-    /* Two bytes are available past the end. Use to ensure file ends
+    (cast(ubyte*)result)[SPAD - 2] = 0;
+    (cast(ubyte*)result)[SPAD - 1] = 0;
+
+    /* EPAD bytes are available past the end. Use to ensure file ends
      * in \n. Need two in case file ends with a \ character.
      */
     if (size)
     {
-        if ((cast(ubyte*)result)[size - 1] != '\n')
+        if ((cast(ubyte*)result)[SPAD + size - 1] != '\n')
         {
-            (cast(ubyte*)result)[size] = '\n';
-            (cast(ubyte*)result)[size + 1] = '\n';
+            (cast(ubyte*)result)[SPAD + size] = '\n';
+            (cast(ubyte*)result)[SPAD + size + 1] = '\n';
             size += 2;
         }
     }
     else
     {   // File is empty, so make it a one-liner
-        (cast(ubyte*)result)[0] = '\n';
+        (cast(ubyte*)result)[SPAD] = '\n';
         ++size;
     }
-    return result[0 .. size];
+    return result[SPAD .. SPAD + size];
 }
