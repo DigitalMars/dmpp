@@ -34,8 +34,8 @@ struct EmptyInputRange(E)
 
 struct StaticArrayBuffer(E, size_t N)
 {
-    E[N] arr = void;
     size_t i;
+    E[N] arr = void;
 
     void init() { i = 0; }
 
