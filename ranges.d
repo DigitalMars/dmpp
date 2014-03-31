@@ -45,6 +45,12 @@ struct StaticArrayBuffer(E, size_t N)
         ++i;
     }
 
+    void put(E[] e)
+    {
+        arr[i .. i + e.length] = e[];
+        i += e.length;
+    }
+
     E[] opSlice()
     {
         return arr[0 .. i];
