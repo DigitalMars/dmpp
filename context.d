@@ -539,6 +539,15 @@ struct Context(R)
 }
 
 
+/*************************************************
+ * Determine if range r is an instance of Context
+ */
+
+template isContext(R)
+{
+    enum bool isContext = __traits(hasMember, R, "stack");
+}
+
 
 /*************************************************
  * Stack of Source's

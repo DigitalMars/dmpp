@@ -1223,9 +1223,7 @@ private R macroScanArgument(R, T)(R r1, bool va_args, ref T routbuf)
 {
     alias Unqual!(ElementEncodingType!R) E;
 
-    enum bool isContext = __traits(compiles, r1.stack.prev);
-
-    static if (isContext)
+    static if (isContext!R)
     {
         auto loc = r1.loc();
     }
@@ -1239,13 +1237,13 @@ private R macroScanArgument(R, T)(R r1, bool va_args, ref T routbuf)
   Loop:
     while (1)
     {
-        static if (!isContext)
+        static if (!isContext!R)
         {   // r.front will be 0 for isContext
             if (r.empty)
                 break;
         }
         auto c = r.front;
-        //writefln("%s c = '%c', x%02x", isContext, cast(char)((c < ' ') ? '?' : c), c);
+        //writefln("%s c = '%c', x%02x", isContext!R, cast(char)((c < ' ') ? '?' : c), c);
         if (c >= '0')
         {
             outbuf.put(cast(uchar)c);
@@ -1327,7 +1325,7 @@ private R macroScanArgument(R, T)(R r1, bool va_args, ref T routbuf)
         outbuf.put(cast(uchar)c);
         r.popFront();
     }
-    static if (isContext)
+    static if (isContext!R)
         err_fatal("premature end of macro argument from %s(%s)",
                 loc.srcFile ? loc.srcFile.filename : "", loc.lineNumber);
     else
