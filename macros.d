@@ -1219,7 +1219,7 @@ unittest
  *      r1 set past end of argument
  */
 
-private R macroScanArgument(R, T)(R r1, bool va_args, ref T outbuf)
+private R macroScanArgument(R, T)(R r1, bool va_args, ref T routbuf)
 {
     alias Unqual!(ElementEncodingType!R) E;
 
@@ -1231,16 +1231,27 @@ private R macroScanArgument(R, T)(R r1, bool va_args, ref T outbuf)
     }
     alias r1 r;
 
+    auto outbuf = routbuf;
+
     outbuf.put(0);
 
     int parens;
   Loop:
     while (1)
     {
-        if (r.empty)
-            break;
+        static if (!isContext)
+        {   // r.front will be 0 for isContext
+            if (r.empty)
+                break;
+        }
         auto c = r.front;
         //writefln("%s c = '%c', x%02x", isContext, cast(char)((c < ' ') ? '?' : c), c);
+        if (c >= '0')
+        {
+            outbuf.put(cast(uchar)c);
+            r.popFront();
+            continue;
+        }
         switch (c)
         {
             case '(':
@@ -1308,7 +1319,6 @@ private R macroScanArgument(R, T)(R r1, bool va_args, ref T outbuf)
                 break;
 
             case 0:
-                assert(0);
                 break Loop;
 
             default:
@@ -1322,9 +1332,10 @@ private R macroScanArgument(R, T)(R r1, bool va_args, ref T outbuf)
                 loc.srcFile ? loc.srcFile.filename : "", loc.lineNumber);
     else
         err_fatal("premature end of macro argument");
-    return r1;
 
   LendOfArg:
+    routbuf = outbuf;
+    //writefln("'%s'", cast(string)outbuf[]);
     return r1;
 }
 
