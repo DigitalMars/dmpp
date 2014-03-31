@@ -1185,7 +1185,7 @@ unittest
     ustring[16] tmpargsbuf = void;
     auto args = Textbuf!(ustring)(tmpargsbuf);
 
-    uchar[64] tmpargbuf = void;
+    uchar[68] tmpargbuf = void;
     auto argbuffer = Textbuf!uchar(tmpargbuf);
 
     args.initialize();
