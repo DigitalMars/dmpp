@@ -774,7 +774,7 @@ void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
     r.popFront();
 
   Louter:
-    while (!r.empty)
+    while (1) //(!r.empty) // r.front returns 0 for end of input
     {
         auto c = r.front;
         switch (c)
@@ -815,7 +815,6 @@ void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
                 break;
 
             case 0:
-                assert(0);
                 goto Ldone;
 
             case '.':
