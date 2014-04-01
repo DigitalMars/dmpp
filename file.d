@@ -153,7 +153,7 @@ void[] myRead(in char[] name, size_t upTo = size_t.max)
             ? min(statbuf.st_size + 1, maxInitialAlloc)
             : minInitialAlloc);
 
-        auto result = malloc(initialAlloc + SPAD + EPAD);
+        result = malloc(initialAlloc + SPAD + EPAD);
         assert(result);
         size_t result_length = initialAlloc;
         size_t size = 0;
