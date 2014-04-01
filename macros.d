@@ -32,14 +32,10 @@ bool logging;
  * Characters that make up the start of an identifier.
  */
 
-immutable bool[256] tabIdentifierStart;
-static this()
-{
-    for (uint u = 0; u < 0x100; ++u)
-    {
-        tabIdentifierStart[u] = (isAlpha(u) || u == '_' || u == '$');
-    }
-}
+immutable bool[256] tabIdentifierStart =
+    iota(0, 0x100)
+    .map!(i => isAlpha(cast(dchar)i) || i == '_' || i == '$')
+    .array;
 
 bool isIdentifierStart(uchar c) pure
 {
@@ -61,14 +57,10 @@ unittest
  * Characters that make up the tail of an identifier.
  */
 
-immutable bool[256] tabIdentifierChar;
-static this()
-{
-    for (uint u = 0; u < 0x100; ++u)
-    {
-        tabIdentifierChar[u] = (isAlphaNum(u) || u == '_' || u == '$');
-    }
-}
+immutable bool[256] tabIdentifierChar =
+    iota(0, 0x100)
+    .map!(i => isAlphaNum(cast(dchar)i) || i == '_' || i == '$')
+    .array;
 
 bool isIdentifierChar(uchar c) pure
 {
