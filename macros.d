@@ -29,27 +29,21 @@ import textbuf;
 bool logging;
 
 /******************************************
- * Classify characters. Needs to be very fast.
+ * Characters that make up the start of an identifier.
  */
 
-bool isIdentifierStart(uchar c) pure
-    in { }
-    out (result) { assert(result == (isAlpha(c) || c == '_' || c == '$')); }
-    body
+immutable bool[256] tabIdentifierStart;
+static this()
 {
-    return (c >= 'A' && c <= 'z' &&
-        (c >= 'a' || c <= 'Z' || c == '_') || c == '$');
+    for (size_t u = 0; u < 0x100; ++u)
+    {
+        tabIdentifierStart[u] = (isAlpha(u) || u == '_' || u == '$');
+    }
 }
 
-bool isIdentifierChar(uchar c) pure
-    in { }
-    out (result) { assert(result == (isAlphaNum(c) || c == '_' || c == '$')); }
-    body
+bool isIdentifierStart(uchar c) pure
 {
-    return ((c >= '0' || c == '$') &&
-            (c <= '9' || c >= 'A')  &&
-            (c <= 'Z' || c >= 'a' || c == '_') &&
-            (c <= 'z'));
+    return tabIdentifierStart[c];
 }
 
 unittest
@@ -58,10 +52,39 @@ unittest
      */
     for (uint u = 0; u < 0x100; ++u)
     {
-        isIdentifierStart(cast(uchar)u);
-        isIdentifierChar(cast(uchar)u);
+        assert(isIdentifierStart(cast(uchar)u) == (isAlpha(u) || u == '_' || u == '$'));
     }
 }
+
+
+/*******************************************
+ * Characters that make up the tail of an identifier.
+ */
+
+immutable bool[256] tabIdentifierChar;
+static this()
+{
+    for (size_t u = 0; u < 0x100; ++u)
+    {
+        tabIdentifierChar[u] = (isAlphaNum(u) || u == '_' || u == '$');
+    }
+}
+
+bool isIdentifierChar(uchar c) pure
+{
+    return tabIdentifierChar[c];
+}
+
+unittest
+{
+    /* Exhaustively test every char
+     */
+    for (uint u = 0; u < 0x100; ++u)
+    {
+        assert(isIdentifierChar(cast(uchar)u) == (isAlphaNum(u) || u == '_' || u == '$'));
+    }
+}
+
 
 // Embedded escape sequence commands
 enum ESC : ubyte
