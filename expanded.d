@@ -79,7 +79,6 @@ struct Expanded(R)
                 {
                     if (ctx.uselastloc)
                     {
-//writeln("test1");
                         ctx.lastloc.linemarker(foutr);
                     }
                     else
@@ -92,7 +91,6 @@ struct Expanded(R)
                          * s.loc.lineNumber may be further ahead than just one.
                          * This, then, is a bug.
                          */
-//writeln("test2");
                         s.loc.linemarker(foutr);
                         ctx.lastloc = s.loc;
                     }
@@ -114,7 +112,6 @@ struct Expanded(R)
             }
             else if (ctx.uselastloc && ctx.lastloc.srcFile)
             {
-//writeln("test4");
                 ctx.lastloc.linemarker(foutr);
             }
         }

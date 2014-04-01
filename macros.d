@@ -28,15 +28,39 @@ import textbuf;
 
 bool logging;
 
-bool isIdentifierStart(uchar c)
+/******************************************
+ * Classify characters. Needs to be very fast.
+ */
+
+bool isIdentifierStart(uchar c) pure
+    in { }
+    out (result) { assert(result == (isAlpha(c) || c == '_' || c == '$')); }
+    body
 {
     return (c >= 'A' && c <= 'z' &&
-        (c >= 'a' || c <= 'Z' || c == '_'));
+        (c >= 'a' || c <= 'Z' || c == '_') || c == '$');
 }
 
-bool isIdentifierChar(uchar c)
+bool isIdentifierChar(uchar c) pure
+    in { }
+    out (result) { assert(result == (isAlphaNum(c) || c == '_' || c == '$')); }
+    body
 {
-    return isAlphaNum(c) || c == '_';
+    return ((c >= '0' || c == '$') &&
+            (c <= '9' || c >= 'A')  &&
+            (c <= 'Z' || c >= 'a' || c == '_') &&
+            (c <= 'z'));
+}
+
+unittest
+{
+    /* Exhaustively test every char
+     */
+    for (uint u = 0; u < 0x100; ++u)
+    {
+        isIdentifierStart(cast(uchar)u);
+        isIdentifierChar(cast(uchar)u);
+    }
 }
 
 // Embedded escape sequence commands
