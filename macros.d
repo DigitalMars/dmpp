@@ -1278,18 +1278,45 @@ private R macroScanArgument(R, T)(R r1, bool va_args, ref T routbuf)
   Loop:
     while (1)
     {
-        static if (!isContext!R)
-        {   // r.front will be 0 for isContext
+        static if (isContext!R)
+        {
+            auto c = r.front;
+            if (c >= '0')
+            {
+                outbuf.put(cast(uchar)c);
+                if (r.expanded.noexpand)
+                {
+                    auto a = r.lookAhead();
+                    size_t n;
+                    while (n < a.length)
+                    {
+                        if (a[n] >= '0')
+                            ++n;
+                        else
+                            break;
+                    }
+                    if (n)
+                    {
+                        outbuf.put(a[0 .. n]);
+                        r.popFrontN(n);
+                    }
+                }
+                r.popFront();
+                continue;
+            }
+        }
+        else
+        {
             if (r.empty)
                 break;
-        }
-        auto c = r.front;
-        //writefln("%s c = '%c', x%02x", isContext!R, cast(char)((c < ' ') ? '?' : c), c);
-        if (c >= '0')
-        {
-            outbuf.put(cast(uchar)c);
-            r.popFront();
-            continue;
+            auto c = r.front;
+            //writefln("%s c = '%c', x%02x", isContext!R, cast(char)((c < ' ') ? '?' : c), c);
+            if (c >= '0')
+            {
+                outbuf.put(cast(uchar)c);
+                r.popFront();
+                continue;
+            }
         }
         switch (c)
         {
