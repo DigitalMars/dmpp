@@ -244,7 +244,8 @@ ustring macroReplacementList(R)(ref R text, bool objectLike, ustring[] parameter
                         {
                             E c2 = cast(E)text.front;
                             if (isAlphaNum(c2) || c2 == '_' || c2 == '$')
-                            {   text.popFront();
+                            {
+                                text.popFront();
                                 outbuf.put(c2);
                             }
                             else
@@ -1051,7 +1052,8 @@ void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
                             }
 
                             //writefln("macroScanArguments('%s')", cast(string)m.name);
-                            r = r.macroScanArguments(m.parameters.length,
+                            r = r.macroScanArguments(cast(string)m.name,
+                                    m.parameters.length,
                                     !!(m.flags & Id.IDdotdotdot),
                                      argsbuffer, argbuffer);
                         }
@@ -1136,8 +1138,8 @@ Ldone:
  *      r past closing )
  */
 
-R macroScanArguments(R, S, T)(R r, size_t nparameters, bool variadic, ref S args,
-        ref T argsbuffer)
+R macroScanArguments(R, S, T)(R r, string name, size_t nparameters,
+    bool variadic, ref S args, ref T argsbuffer)
 {
     /* Temporary buffer to store indices into argsbuffer[] rather than pointers,
      * since argsbuffer[] may get reallocated
@@ -1187,13 +1189,14 @@ R macroScanArguments(R, S, T)(R r, size_t nparameters, bool variadic, ref S args
 
             if ((argsindexbuffer.length/2) != nparameters)
             {
-                err_fatal("expected %d macro arguments, had %d", nparameters, argsindexbuffer.length/2);
+                err_fatal("expected %d macro arguments for %s, had %d",
+                    nparameters, name, argsindexbuffer.length/2);
             }
             r.popFront();
             goto Lret;
         }
     }
-    err_fatal("argument list doesn't end with ')'");
+    err_fatal("argument list for %s doesn't end with ')'", name);
 
 Lret:
     // Build args[], as argsbuffer[] is no longer going to be reallocated
@@ -1229,7 +1232,7 @@ unittest
 
     args.initialize();
     argbuffer.initialize();
-    auto r = s.macroScanArguments(2, false, args, argbuffer);
+    auto r = s.macroScanArguments("macroname", 2, false, args, argbuffer);
 //writefln("'%s', %s", args, args.length);
     assert(!r.empty && r.front == 'a');
     assert(args[] == ["ab","cd"]);
@@ -1237,7 +1240,7 @@ unittest
     s = cast(ustring)"ab )a";
     args.initialize();
     argbuffer.initialize();
-    r = s.macroScanArguments(2, true, args, argbuffer);
+    r = s.macroScanArguments("macroname", 2, true, args, argbuffer);
 //writefln("'%s', %s", args, args.length);
     assert(!r.empty && r.front == 'a');
     assert(args[] == ["ab",""]);
