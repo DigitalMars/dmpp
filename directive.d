@@ -185,7 +185,7 @@ void macrosDefine(ustring def)
     return;
 
 Lerror:
-    err_fatal("malformed macro definition");
+    err_fatal("malformed definition for macro `%s'", cast(string)id);
 }
 
 unittest
