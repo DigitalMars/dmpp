@@ -46,9 +46,8 @@ struct Context(R)
     const string[] paths;     // #include paths
     const size_t sysIndex;    // paths[sysIndex] is start of system #includes
 
-    bool last;                // true if this is the last file presented on the command line
-    bool errors;              // true if any errors occurred
-    __gshared uint counter;   // for __COUNTER__
+    bool errors;        // true if any errors occurred
+    __gshared uint counter;       // for __COUNTER__
 
     bool doDeps;        // true if doing dependency file generation
     string[] deps;      // dependency file contents
@@ -421,9 +420,6 @@ struct Context(R)
                 // Saw #endif and no tokens
                 s.loc.srcFile.includeGuard = s.includeGuard;
             }
-
-            if (last && s.loc.srcFile.once)
-                s.loc.srcFile.freeContents();   // won't need the contents anymore
         }
         stack.psource = stack.psource.prev;
         debug (ContextStats)
