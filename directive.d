@@ -185,7 +185,7 @@ void macrosDefine(ustring def)
     return;
 
 Lerror:
-    err_fatal("malformed macro definition");
+    err_fatal("malformed definition for macro `%s'", cast(string)id);
 }
 
 unittest
@@ -277,6 +277,21 @@ bool parseDirective(R)(ref R r)
             auto id = r.idbuf[];
             switch (cast(string)id)
             {
+                case "ident":
+                    /*
+                     * Support for old-style #ident, see
+                     * http://gcc.gnu.org/onlinedocs/cpp/Other-Directives.html. Skip
+                     * to end of line, outputting stuff verbatim.
+                     */
+                    do
+                    {
+                        r.popFront();
+                        if (r.empty)
+                            goto Ldefault;
+                    }
+                    while (r.front != TOK.eol);
+                    break;
+
                 case "line":
                     // #line directive
                     // Turn off expanded output so this line is not emitted
@@ -388,7 +403,18 @@ bool parseDirective(R)(ref R r)
                     if (!m)
                     {
                         auto csf = r.src.currentSourceFile();
-                        if (csf && !csf.loc.isSystem)
+                        if (csf && csf.loc.isSystem)
+                        {
+                            /* System macros can redefine without a #undef first,
+                             * so fake #undef and try again
+                             */
+                            m = Id.pool(macid);
+                            assert(m);
+                            m.flags &= ~(Id.IDmacro | Id.IDdotdotdot | Id.IDfunctionLike);
+                            m = Id.defineMacro(macid, parameters, text, flags);
+                            assert(m);
+                        }
+                        else
                             err_fatal("redefinition of macro %s", cast(string)macid);
                     }
                     r.src.expanded.on();
@@ -414,7 +440,6 @@ bool parseDirective(R)(ref R r)
                     auto m = Id.search(r.idbuf[]);
                     if (m)
                         m.flags &= ~(Id.IDmacro | Id.IDdotdotdot | Id.IDfunctionLike);
-
                     r.popFront();
                     if (r.front != TOK.eol)
                         err_fatal("end of line expected following #undef");
@@ -445,12 +470,8 @@ bool parseDirective(R)(ref R r)
 
                 case "if":
                 {
-                    {
-                    auto csf = r.src.currentSourceFile();
-                    if (csf)
+                    if (auto csf = r.src.currentSourceFile())
                         csf.seenTokens = true;
-                    }
-
                     // Turn off expanded output so this line is not emitted
                     r.src.expanded.off();
                     r.src.expanded.eraseLine();
@@ -478,12 +499,8 @@ bool parseDirective(R)(ref R r)
 
                 case "ifdef":
                 {
-                    {
-                    auto csf = r.src.currentSourceFile();
-                    if (csf)
+                    if (auto csf = r.src.currentSourceFile())
                         csf.seenTokens = true;
-                    }
-
                     // Turn off expanded output so this line is not emitted
                     r.src.expanded.off();
                     r.src.expanded.eraseLine();
@@ -733,13 +750,7 @@ bool parseDirective(R)(ref R r)
                 }
 
                 // s is the new "source file"
-                auto srcfile = SrcFile.lookup(stringbuf[].idup);
-                stringbuf.free();
-                srcfile.contents = sf.loc.srcFile.contents;
-                srcfile.includeGuard = sf.loc.srcFile.includeGuard;
-                srcfile.once = sf.loc.srcFile.once;
-
-                sf.loc.srcFile = srcfile;
+                sf.loc.fileName = stringbuf[].idup;
 
                 if (linemarker)
                 {
@@ -890,6 +901,12 @@ void skipFalseCond(R)(ref R r)
                         r.src.ifstack.pop();
                         break;
 
+                    case "error":
+                    case "warning":
+                        // Don't tokenize, even though the Standard says so
+                        r.src.restOfLine();
+                        break;
+
                     default:
                         break;
                 }
@@ -978,4 +995,3 @@ void includeFile(R)(R ctx, bool includeNext, bool sysstring, const(char)[] s,
     writeStatus(sf.cachedRead ? 'C' : ' ');
     ctx.pushFile(sf, sysstring, pathIndex);
 }
-

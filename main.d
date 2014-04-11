@@ -48,9 +48,6 @@ else
                 if (i)
                     context.reset();
 
-                if (i + 1 == params.sourceFilenames.length)
-                    context.last = true;                // it's the last time through
-
                 auto srcFilename = params.sourceFilenames[i];
                 auto outFilename = params.stdout ? "-" : params.outFilenames[i];
 
@@ -110,4 +107,3 @@ void err_warning(T...)(Loc loc, T args)
     stderr.write("warning: ");
     stderr.writefln(args);
 }
-
