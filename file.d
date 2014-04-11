@@ -38,14 +38,12 @@ else version (Posix)
 else
     static assert(false, "Module " ~ .stringof ~ " not implemented for this OS.");
 
-
 /**********************
  * SPAD allows us to "look behind" the start of a buffer, to avoid the check
  * EPAD ensures that buffers end in a \n
  */
 enum SPAD = 16;     // only need 2, the rest is to align the buffer
 enum EPAD = 2;
-
 
 /********************************************
 Read entire contents of file $(D name) and returns it as an untyped

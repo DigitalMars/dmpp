@@ -54,4 +54,3 @@ struct Loc
             f.writef("%s(%d) : ", fileName, lineNumber);
     }
 }
-

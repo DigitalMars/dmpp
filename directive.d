@@ -277,6 +277,21 @@ bool parseDirective(R)(ref R r)
             auto id = r.idbuf[];
             switch (cast(string)id)
             {
+                case "ident":
+                    /*
+                     * Support for old-style #ident, see
+                     * http://gcc.gnu.org/onlinedocs/cpp/Other-Directives.html. Skip
+                     * to end of line, outputting stuff verbatim.
+                     */
+                    do
+                    {
+                        r.popFront();
+                        if (r.empty)
+                            goto Ldefault;
+                    }
+                    while (r.front != TOK.eol);
+                    break;
+
                 case "line":
                     // #line directive
                     // Turn off expanded output so this line is not emitted
@@ -425,7 +440,6 @@ bool parseDirective(R)(ref R r)
                     auto m = Id.search(r.idbuf[]);
                     if (m)
                         m.flags &= ~(Id.IDmacro | Id.IDdotdotdot | Id.IDfunctionLike);
-
                     r.popFront();
                     if (r.front != TOK.eol)
                         err_fatal("end of line expected following #undef");
@@ -456,12 +470,8 @@ bool parseDirective(R)(ref R r)
 
                 case "if":
                 {
-                    {
-                    auto csf = r.src.currentSourceFile();
-                    if (csf)
+                    if (auto csf = r.src.currentSourceFile())
                         csf.seenTokens = true;
-                    }
-
                     // Turn off expanded output so this line is not emitted
                     r.src.expanded.off();
                     r.src.expanded.eraseLine();
@@ -489,12 +499,8 @@ bool parseDirective(R)(ref R r)
 
                 case "ifdef":
                 {
-                    {
-                    auto csf = r.src.currentSourceFile();
-                    if (csf)
+                    if (auto csf = r.src.currentSourceFile())
                         csf.seenTokens = true;
-                    }
-
                     // Turn off expanded output so this line is not emitted
                     r.src.expanded.off();
                     r.src.expanded.eraseLine();
@@ -989,4 +995,3 @@ void includeFile(R)(R ctx, bool includeNext, bool sysstring, const(char)[] s,
     writeStatus(sf.cachedRead ? 'C' : ' ');
     ctx.pushFile(sf, sysstring, pathIndex);
 }
-

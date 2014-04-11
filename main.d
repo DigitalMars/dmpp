@@ -25,8 +25,6 @@ extern (C) int isatty(int);
 
 alias typeof(File.lockingTextWriter()) R;
 
-//import ranges : BitBucket; alias BitBucket!uchar R;
-
 version (unittest)
 {
     int main() { writeln("unittests successful"); return EXIT_SUCCESS; }
@@ -89,7 +87,7 @@ else
 
         context.globalFinish();
 
-//        exit(EXIT_SUCCESS);     // this prevents the collector from running on exit
+        exit(EXIT_SUCCESS);     // this prevents the collector from running on exit
                                 // (it also prevents -profile from working)
         return EXIT_SUCCESS;
     }
@@ -109,4 +107,3 @@ void err_warning(T...)(Loc loc, T args)
     stderr.write("warning: ");
     stderr.writefln(args);
 }
-

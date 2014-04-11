@@ -79,7 +79,7 @@ struct SrcFile
      */
     void freeContents()
     {
-        myReadFree(cast(void[])contents);
+        myReadFree(cast(void[]) contents);
         contents = null;
     }
 

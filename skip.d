@@ -71,25 +71,25 @@ R skipCComment(alias error = err_fatal, R)(R r) if (isInputRange!R)
 outer:
     for (;;)
     {
-      if (r.empty)
-          break;
-      for (;;)
-      {
-          if (r.front != '*')
-          {
-              // Short path
-              r.popFront();
-              break;
-          }
-          r.popFront();
-          if (r.empty)
-              break outer;
-          if (r.front == '/')
-          {
-              r.popFront();
-              return r;
-          }
-      }
+        if (r.empty)
+            break;
+        for (;;)
+        {
+            if (r.front != '*')
+            {
+                // Short path
+                r.popFront();
+                break;
+            }
+            r.popFront();
+            if (r.empty)
+                break outer;
+            if (r.front == '/')
+            {
+                r.popFront();
+                return r;
+            }
+        }
     }
     error("/* comment is not closed with */");
     assert(0);

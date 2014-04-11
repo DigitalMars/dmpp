@@ -66,13 +66,12 @@ struct Expanded(R)
         }
     }
 
-    void put2()
+    private void put2()
     {
         uchar c = lineBuffer[1];
         if (c != '\n' && c != '\r')
         {
-            auto s = ctx.currentSourceFile();
-            if (s)
+            if (auto s = ctx.currentSourceFile())
             {
                 auto linnum = s.loc.lineNumber - 1;
                 if (!ctx.lastloc.srcFile || ctx.lastloc.fileName !is s.loc.fileName)
@@ -157,5 +156,3 @@ struct Expanded(R)
         lineBuffer.put(0);
     }
 }
-
-
