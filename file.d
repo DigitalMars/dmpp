@@ -39,6 +39,13 @@ else
     static assert(false, "Module " ~ .stringof ~ " not implemented for this OS.");
 
 
+/**********************
+ * SPAD allows us to "look behind" the start of a buffer, to avoid the check
+ * EPAD ensures that buffers end in a \n
+ */
+enum SPAD = 16;     // only need 2, the rest is to align the buffer
+enum EPAD = 2;
+
 
 /********************************************
 Read entire contents of file $(D name) and returns it as an untyped
@@ -56,9 +63,6 @@ Returns: Untyped array of bytes _read.
 
 void[] myRead(in char[] name, size_t upTo = size_t.max)
 {
-    enum SPAD = 16;     // only need 2, the rest is to align the buffer
-    enum EPAD = 2;
-
     void* result = null;
 
     version(Windows)
@@ -204,4 +208,12 @@ void[] myRead(in char[] name, size_t upTo = size_t.max)
         ++size;
     }
     return result[SPAD .. SPAD + size];
+}
+
+/*****************************
+ * Free buffer allocated by myRead().
+ */
+void myReadFree(void[] buf)
+{
+    free(buf.ptr - SPAD);
 }
