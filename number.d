@@ -56,6 +56,7 @@ R lexNumber(R)(R r, out ppint_t result, out bool isunsigned, out bool isinteger)
         switch (c)
         {
             case '0': .. case '7':
+            case '8': .. case '9':
                 r.popFront();
                 radix = 8;
                 n = c - '0';
@@ -78,7 +79,6 @@ R lexNumber(R)(R r, out ppint_t result, out bool isunsigned, out bool isinteger)
                 isinteger = false;
                 return r;
 
-            case '8': .. case '9':
             case 'A': .. case 'D': case 'F':
             case 'a': .. case 'd': case 'f':
                 err_fatal("octal digit expected");
@@ -97,14 +97,8 @@ R lexNumber(R)(R r, out ppint_t result, out bool isunsigned, out bool isinteger)
         switch (c)
         {
             case '0': .. case '7':
-                r.popFront();
-                d = c - '0';
-                break;
-
             case '8': .. case '9':
                 r.popFront();
-                if (radix == 8)
-                    err_fatal("octal digit expected");
                 d = c - '0';
                 break;
 
