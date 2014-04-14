@@ -627,6 +627,30 @@ void macroExpandedText(Context, R)(Id* m, ustring[] args, ref R buffer)
         }
     }
 
+    /* The expanded version of each element in args[] is stored in expbuf[],
+     * one after the other.
+     * This is so that args[] are never expanded more than once, subsequent
+     * references will use the previously expanded version.
+     * Slices of previously expanded versions are kept in cache[].
+     */
+    uchar[512] tmpbuf = void;
+    auto expbuf = Textbuf!(uchar,"met")(tmpbuf);
+    assert(expbuf.length == 0);
+
+    size_t[2][20] cachetmp = void;
+    size_t[2][] cache = cachetmp;
+    if (args.length + 1 > cachetmp.length)
+    {
+        auto p = malloc(size_t[2].sizeof * (args.length + 1));
+        assert(p);
+        cache = (cast(size_t[2]*)p)[0 .. args.length + 1];
+    }
+    for (size_t i = 0; i < args.length + 1; ++i)
+    {
+        cache[i][1] = 0;        // the check for initialization is only done on the [1] element
+    }
+
+
     /* ESC.start, ESC.stringize and ESC.concat only appear in text[]
      */
 
@@ -757,23 +781,36 @@ void macroExpandedText(Context, R)(Id* m, ustring[] args, ref R buffer)
             {
                 //writefln("\t\tbefore '%s'", cast(string)a);
 
-                uchar[512] tmpbuf = void;
-                auto expbuf = Textbuf!(uchar,"met")(tmpbuf);
-                assert(expbuf.length == 0);
+                if (cache[argi][1])     // if already expanded
+                {
+                    // Reuse cached version
+                    auto t = expbuf[cache[argi][0] .. cache[argi][1]];
+                    if (t.length && isMultiTok(t[0]))
+                        buffer.put(ESC.brk);
+                    buffer.put(t);
+                    if (t.length && isMultiTok(t[t.length - 1]))
+                        buffer.put(ESC.brk);
+                }
+                else
+                {
+                    auto start = expbuf.length;
+                    macroExpand!Context(a, expbuf);
 
-                macroExpand!Context(a, expbuf);
+                    //writefln("\t\tafter  '%s'", cast(string)expbuf[]);
+                    auto s = expbuf[start .. expbuf.length];
+                    auto t = trimEscWhiteSpace(s);
+                    //writefln("\t\ttrim   '%s'", cast(string)t);
+                    if (t.length && isMultiTok(t[0]))
+                        buffer.put(ESC.brk);
+                    buffer.put(t);
+                    if (t.length && isMultiTok(t[t.length - 1]))
+                        buffer.put(ESC.brk);
 
-                //writefln("\t\tafter  '%s'", cast(string)expbuf[]);
-                auto s = expbuf[];
-                auto t = trimEscWhiteSpace(s);
-                //writefln("\t\ttrim   '%s'", cast(string)t);
-                if (t.length && isMultiTok(t[0]))
-                    buffer.put(ESC.brk);
-                buffer.put(t);
-                if (t.length && isMultiTok(t[t.length - 1]))
-                    buffer.put(ESC.brk);
-
-                expbuf.free();
+                    auto b = expbuf[];
+                    cache[argi][0] = t.ptr - b.ptr;
+                    cache[argi][1] = t.ptr - b.ptr + t.length;
+                    assert(t.length <= b.length);
+                }
             }
             else
             {
@@ -793,6 +830,13 @@ void macroExpandedText(Context, R)(Id* m, ustring[] args, ref R buffer)
         else
             buffer.put(m.text[q]);
     }
+
+    if (args.length + 1 > cachetmp.length)
+    {
+        free(cache.ptr);
+    }
+
+    expbuf.free();
 
     //foreach (arg; args)
         //if (arg.ptr) free(cast(void*)arg.ptr);
