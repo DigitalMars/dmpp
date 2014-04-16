@@ -128,6 +128,7 @@ ustring macroReplacementList(R)(ref R text, bool objectLike, ustring[] parameter
         {
             case '\t':
                 c = ' ';
+                goto case;
             case ' ':
                 if (outbuf.length == 1 ||       // no leading whitespace
                     outbuf.last() == ' ')       // collapse adjacent whitespace into one ' '
@@ -483,6 +484,7 @@ private void stringize(R)(ref R outbuf, const(uchar)[] text)
                 case '?':
                 case '\\':
                     outbuf.put('\\');
+                    goto default;
                 default:
                     outbuf.put(c);
                     break;
@@ -525,6 +527,7 @@ private void stringize(R)(ref R outbuf, const(uchar)[] text)
 
             case '?':
                 outbuf.put('\\');
+                goto default;
             default:
                 outbuf.put(c);
                 break;
@@ -700,6 +703,9 @@ void macroExpandedText(Context, R)(Id* m, ustring[] args, ref R buffer)
     auto expbuf = Textbuf!(uchar,"met")(tmpbuf);
     assert(expbuf.length == 0);
 
+
+    // cache[arg-index] contains the offsets in expbuf where the macro
+    // argument at the given index was previously expanded.
     size_t[2][20] cachetmp = void;
     size_t[2][] cache = cachetmp;
     if (args.length + 1 > cachetmp.length)
