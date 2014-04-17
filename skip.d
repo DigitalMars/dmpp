@@ -139,7 +139,7 @@ R skipCharacterLiteral(alias error = err_fatal, R, S)(R r, ref S s)
 
 unittest
 {
-    BitBucket!char b = void;
+    ranges.BitBucket!char b = void;
 
     string s = "456\\\\'x";
     auto r = s.skipCharacterLiteral(b);
@@ -191,7 +191,7 @@ R skipStringLiteral(alias error = err_fatal, R, S)(R r, ref S s)
 
 unittest
 {
-    BitBucket!char b = void;
+    ranges.BitBucket!char b = void;
 
     string s = "456\\\\\"x";
     auto r = s.skipStringLiteral(b);
