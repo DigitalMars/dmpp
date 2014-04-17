@@ -57,14 +57,6 @@ R dependencyFileFormat(R)(ref R r, string[] deps) if (isOutputRange!(R, char))
         }
         if (col > 1)
             putln();
-
-        foreach (dep; deps[1 .. $])
-        {
-            putln();
-            puts(dep);
-            r.put(':');
-            putln();
-        }
     }
     return r;
 }
@@ -86,22 +78,6 @@ unittest
     assert(r ==
 "asdfasdf." ~ extObj ~ ":  asdfasdf.d kjjksdkfj.d asdkjfksdfj.d asdfasdf0.d kjjksdkfj0.d \\
  asdkjfksdfj0.d asdfasdf1.d kjjksdkfj1.d asdkjfksdfj1.d
-
-kjjksdkfj.d:
-
-asdkjfksdfj.d:
-
-asdfasdf0.d:
-
-kjjksdkfj0.d:
-
-asdkjfksdfj0.d:
-
-asdfasdf1.d:
-
-kjjksdkfj1.d:
-
-asdkjfksdfj1.d:
 ");
     textbuf.free();
 }

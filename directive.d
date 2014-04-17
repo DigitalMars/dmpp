@@ -953,7 +953,7 @@ void includeFile(R)(R ctx, bool includeNext, bool sysstring, const(char)[] s,
     if (isSystem)
         sysstring = true;
 
-    auto sf = ctx.searchForFile(includeNext, curdir, sysstring, s, pathIndex, currentFile);
+    auto sf = ctx.searchForFile(includeNext, curdir, sysstring, isSystem, s, pathIndex, currentFile);
     if (!sf)
     {
         err_fatal("#include file '%s' not found", s);
@@ -966,7 +966,7 @@ void includeFile(R)(R ctx, bool includeNext, bool sysstring, const(char)[] s,
         {
             stderr.writef("%s%s",
                     c,
-                    sysstring ? "S" : " ");
+                    isSystem ? "S" : " ");
             for (auto level = ctx.nestLevel(); level > 0; --level)
                 stderr.write(' ');
             stderr.writeln(sf.filename);
@@ -993,5 +993,5 @@ void includeFile(R)(R ctx, bool includeNext, bool sysstring, const(char)[] s,
 
     //writefln("found '%s', pathIndex = %s", sf.filename, pathIndex);
     writeStatus(sf.cachedRead ? 'C' : ' ');
-    ctx.pushFile(sf, sysstring, pathIndex);
+    ctx.pushFile(sf, isSystem, pathIndex);
 }

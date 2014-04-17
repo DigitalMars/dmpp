@@ -517,13 +517,16 @@ struct Context(R)
      * Search for file along paths[]
      * Input:
      *  s               file to search for (in a temp buffer)
+     *  sysstring       if <file>
+     *  isSystem        the file doing the #include is a system file
      *  currentFile     file name of file doing the #include
      *  pathIndex       index of file doing the #include
      * Output:
      *  pathIndex       index of where file was found
      *  isSystem        set to true if file is found in -isystem paths
      */
-    SrcFile* searchForFile(bool includeNext, bool curdir, ref bool isSystem, const(char)[] s,
+    SrcFile* searchForFile(bool includeNext, bool curdir, bool sysstring, ref bool isSystem,
+        const(char)[] s,
         ref int pathIndex, string currentFile)
     {
         //writefln("searchForFile(includeNext = %s, curdir = %s, isSystem = %s, s = '%s')", includeNext, curdir, isSystem, s);
@@ -532,7 +535,7 @@ struct Context(R)
         if (curdir)
             currentPath = dirName(currentFile);
 
-        if (isSystem)
+        if (isSystem || sysstring)
         {
             if (includeNext)
                 ++pathIndex;
@@ -560,6 +563,8 @@ struct Context(R)
             if (!isSystem && doDeps)
                 deps ~= sf.filename;
         }
+
+        isSystem |= sysstring;
         return sf;
     }
 }
