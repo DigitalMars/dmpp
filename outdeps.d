@@ -14,7 +14,10 @@ import std.range;
 
 import textbuf;
 
-immutable string extObj = "obj";
+version (Windows)
+    immutable string extObj = "obj";
+else
+    immutable string extObj = "o";
 
 /***************************************
  * Format dependencies into OutputRange r.
@@ -81,7 +84,7 @@ unittest
     auto r = textbuf[0 .. textbuf.length];
     //writefln("|%s|", r);
     assert(r ==
-"asdfasdf.obj:  asdfasdf.d kjjksdkfj.d asdkjfksdfj.d asdfasdf0.d kjjksdkfj0.d \\
+"asdfasdf." ~ extObj ~ ":  asdfasdf.d kjjksdkfj.d asdkjfksdfj.d asdfasdf0.d kjjksdkfj0.d \\
  asdkjfksdfj0.d asdfasdf1.d kjjksdkfj1.d asdkjfksdfj1.d
 
 kjjksdkfj.d:
