@@ -557,12 +557,8 @@ struct Context(R)
         //writefln("path = %d sys = %d length = %d", pathIndex, sysIndex, paths.length);
         if (pathIndex >= sysIndex && pathIndex < paths.length)
             isSystem = true;
-
-        if (!sf.cachedRead)
-        {
-            if (!isSystem && doDeps)
-                deps ~= sf.filename;
-        }
+        else if (!sf.cachedRead && doDeps)
+            deps ~= sf.filename;
 
         isSystem |= sysstring;
         return sf;
