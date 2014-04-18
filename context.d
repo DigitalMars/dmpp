@@ -530,6 +530,7 @@ struct Context(R)
         ref int pathIndex, string currentFile)
     {
         //writefln("searchForFile(includeNext = %s, curdir = %s, isSystem = %s, s = '%s')", includeNext, curdir, isSystem, s);
+        //writefln("paths = [%s]", paths);
 
         string currentPath;
         if (curdir)
@@ -540,7 +541,7 @@ struct Context(R)
             if (includeNext)
                 ++pathIndex;
             else
-                pathIndex = 0; //cast(int)sysIndex;
+                pathIndex = 1;
         }
         else
         {
@@ -554,8 +555,10 @@ struct Context(R)
         if (!sf)
             return null;
 
-        //writefln("path = %d sys = %d length = %d", pathIndex, sysIndex, paths.length);
-        if (pathIndex >= sysIndex && pathIndex < paths.length)
+        //writefln("pathIndex = %d sysIndex = %d length = %d", pathIndex, sysIndex, paths.length);
+        if (isSystem && pathIndex > sysIndex && pathIndex == paths.length)
+            { }
+        else if (pathIndex >= sysIndex && pathIndex < paths.length)
             isSystem = true;
         else if (!sf.cachedRead && doDeps)
             deps ~= sf.filename;

@@ -182,7 +182,7 @@ void combineSearchPaths(const string[] includePaths, const string[] sysIncludePa
     /* Concatenate incpaths[] and syspaths[] into paths[]
      * but remove from incpaths[] any that are also in syspaths[]
      */
-    paths = incpaths.filter!((a) => !syspaths.canFind(a)).array;
+    paths = incpaths.filter!((a) => !syspaths.canFind(a[1 .. $])).array;
     sysIndex = paths.length;
     paths ~= syspaths;
 
