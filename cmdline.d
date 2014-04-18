@@ -67,7 +67,7 @@ Options:
 
     Params p;
 
-    p.includes ~= ".";
+    //p.includes ~= ".";
 
     getopt(args,
         std.getopt.config.passThrough,
@@ -154,7 +154,7 @@ unittest
         assert(p.sourceFilenames == ["foo.c"]);
         assert(p.defines == ["macro=value"]);
         assert(p.depFilename == "out.dep");
-        assert(p.includes == [".", "path1", "path2"]);
+        assert(p.includes == ["path1", "path2"]);
         assert(p.sysincludes == ["sys1", "sys2"]);
         assert(p.outFilenames == ["out.i"]);
 }
@@ -182,7 +182,7 @@ void combineSearchPaths(const string[] includePaths, const string[] sysIncludePa
     /* Concatenate incpaths[] and syspaths[] into paths[]
      * but remove from incpaths[] any that are also in syspaths[]
      */
-    paths = incpaths.filter!((a) => !syspaths.canFind(a[1 .. $])).array;
+    paths = "." ~ incpaths.filter!((a) => !syspaths.canFind(a)).array;
     sysIndex = paths.length;
     paths ~= syspaths;
 
@@ -194,6 +194,7 @@ unittest
     size_t sysIndex;
 
     combineSearchPaths(["a" ~ pathSeparator ~ "b","c","d"], ["e","c","f"], paths, sysIndex);
-    assert(sysIndex == 3);
-    assert(paths == ["a","b","d","e","c","f"]);
+    //writefln("paths [%s], sysIndex = %s", paths, sysIndex);
+    assert(sysIndex == 4);
+    assert(paths == [".","a","b","d","e","c","f"]);
 }
