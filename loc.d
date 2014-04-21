@@ -33,7 +33,7 @@ struct Loc
     SrcFile* srcFile;
     string fileName;    // because #line may change the filename
     uint lineNumber;    // line number of current position
-    Sys system;        // system file status
+    Sys system;         // system file status
 
     /********************************************
      * Write out linemarker for current location to range r.
@@ -41,7 +41,7 @@ struct Loc
     void linemarker(R)(R r)
     {
         r.formattedWrite("# %d \"%s\"", lineNumber - 1, fileName);
-        if (system)
+        if (system & Sys.syspath)
         {
             r.put(' ');
             /* Values are:
