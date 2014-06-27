@@ -126,7 +126,6 @@ R skipCComment(alias error = err_fatal, R)(R r) if (isInputRange!R)
             else
             {
                 auto a = r.lookAhead();
-writefln("%d '%s'", a.length, cast(string)a);
                 size_t n;
                 while (n + 1 < a.length)
                 {
