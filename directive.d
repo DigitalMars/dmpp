@@ -391,7 +391,27 @@ bool parseDirective(R)(ref R r)
                         r.lexMacroParameters(variadic, parameters);
                     }
 
-                    auto text = r.src.macroReplacementList(objectLike, parameters);
+                    ustring text;
+/+
+                    /* Could just do:
+                     *   auto text = r.src.macroReplacementList(objectLike, parameters);
+                     * but take advantage of the fact that all of the text will be in the lookahead buffer.
+                     */
+                    auto lookahead = r.src.lookAhead();
+                    auto n = lookahead.length;
+                    if (n && indexOf(cast(string)lookahead, '*') == -1)
+                    {
+//writefln("%d '%s'", lookahead.length, lookahead);
+                        assert(lookahead[n - 1] == '\n');
+                        text = lookahead.macroReplacementList(objectLike, parameters);
+                        r.src.popFrontN(n - 1);
+                        r.popFront();
+                    }
+                    else
++/
+                    {
+                        text = r.src.macroReplacementList(objectLike, parameters);
+                    }
 
                     uint flags = 0;
                     if (variadic)
