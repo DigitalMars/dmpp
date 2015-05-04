@@ -83,7 +83,9 @@ struct Context(R)
         this.doDeps = params.depFilename.length != 0;
 
         string[] pathsx;
-        combineSearchPaths(params.includes, params.sysincludes, pathsx, sysIndex);
+        size_t sysindex;
+        combineSearchPaths(params.includes, params.sysincludes, pathsx, sysindex);
+        sysIndex = sysindex;
         paths = pathsx;         // workaround for Bugzilla 11743
 
         ifstack = Textbuf!(ubyte,"ifs")(tmpbuf);
