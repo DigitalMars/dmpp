@@ -174,9 +174,9 @@ struct Context(R)
                 // locate sources).
                 import std.file, std.format;
                 outrange.formattedWrite(
-                    "# 1 \"%1$s\"\n"
-                    "# 1 \"%2$s//\"\n"
-                    "# 1 \"<command-line>\"\n"
+                    "# 1 \"%1$s\"\n" ~
+                    "# 1 \"%2$s//\"\n" ~
+                    "# 1 \"<command-line>\"\n" ~
                     "# 1 \"%1$s\"\n",
                     s.loc.srcFile.filename, getcwd);
             }

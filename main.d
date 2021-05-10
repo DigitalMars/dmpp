@@ -7,6 +7,7 @@
  */
 
 import std.array;
+import std.file;
 import std.format;
 import std.stdio;
 import core.stdc.stdlib;
@@ -80,14 +81,14 @@ else
         }
         catch (Exception e)
         {
-            context.loc().write(&stderr);
+            context.loc().write(stderr());
             stderr.writeln(e.msg);
             exit(EXIT_FAILURE);
         }
 
         context.globalFinish();
 
-        exit(EXIT_SUCCESS);     // this prevents the collector from running on exit
+//        exit(EXIT_SUCCESS);     // this prevents the collector from running on exit
                                 // (it also prevents -profile from working)
         return EXIT_SUCCESS;
     }
@@ -103,7 +104,8 @@ void err_fatal(T...)(T args)
 
 void err_warning(T...)(Loc loc, T args)
 {
-    loc.write(&stderr);
+    loc.write(stderr());
     stderr.write("warning: ");
     stderr.writefln(args);
 }
+

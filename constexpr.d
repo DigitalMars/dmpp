@@ -730,7 +730,7 @@ unittest
     auto lexer = createLexer(s);
     assert(!lexer.empty);
     auto n = lexer.Cond();
-    assert(n.value == (1L ? 2L,3L : 4Lu));
+    assert(n.value == (1L ? 3L : 4Lu));
     assert(n.isunsigned == true);
   }
 }

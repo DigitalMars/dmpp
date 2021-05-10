@@ -50,6 +50,9 @@ release :
 profile :
 	$(DMD) -profile $(SRCS) -ofdmpp.exe
 
+profilegc :
+	$(DMD) -profile=gc $(SRCS) -ofdmpp.exe
+
 unittest : $(SRCS)
 	$(DMD) -g $(SRCS) -ofdmpp.exe -unittest -cov
 

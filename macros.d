@@ -14,6 +14,7 @@ import core.stdc.string;
 import std.algorithm;
 import std.array;
 import std.ascii;
+import std.conv;
 import std.range;
 import std.stdio;
 import std.traits;
@@ -326,16 +327,16 @@ unittest
 
     ubyte[6] d = cast(ubyte[])("" ~ ESC.space ~ " a " ~ ESC.space ~ " ");
     s = trimWhiteSpace(cast(uchar[])d);
-    assert(s == x"FD 61 FD");
+    assert(s == std.conv.hexString!"FD 61 FD");
 
     ubyte[1] e = cast(ubyte[])("" ~ ESC.space ~ "");
     s = trimWhiteSpace(cast(uchar[])e);
-    assert(s == x"FD");
+    assert(s == std.conv.hexString!"FD");
 
     ubyte[8] f = cast(ubyte[])("" ~ ESC.space ~ " ab " ~ ESC.space ~ "" ~ ESC.space ~ " ");
     s = trimWhiteSpace(cast(uchar[])f);
 //writefln("'%s', %s", s, s.length);
-    assert(s == x"FD 61 62 FD FD");
+    assert(s == std.conv.hexString!"FD 61 62 FD FD");
 
 }
 
@@ -887,7 +888,7 @@ unittest
 private enum EXPAND : ubyte { none, doublequote, singlequote, expand, zero, dot, digit, idstart }
 private immutable EXPAND[256] expand;
 
-static this()
+shared static this()
 {
     // Initialize lookup table
     foreach (uint u; 0 .. 256)
