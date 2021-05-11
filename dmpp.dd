@@ -1,7 +1,8 @@
 Ddoc
 
-$(P dmpp is a C preprocessor. It reads source files in C or C++, and
-generates a preprocessed output file.
+$(P
+$(B dmpp) is a small, fast, standalone C preprocessor. It reads source files in C or C++, and
+generates a preprocessed output file. It is implemented in the D programming language.
 )
 
 $(TABLE2 Options,
@@ -49,7 +50,7 @@ $(OL
 )
 )
 
-$(SECTION2 Bugs:,
+$(SECTION2 Limitations:,
 
 $(OL
    $(LI trigraphs not supported)

@@ -1,7 +1,7 @@
 # dmpp
 
-**dmpp** is a C preprocessor. It reads source files in C or C++, and
-generates a preprocessed output file.
+**dmpp** is a small, fast, standalone C preprocessor. It reads source files in C or C++, and
+generates a preprocessed output file. It is implemented in the D programming language.
 
 
 ## Options
@@ -48,7 +48,7 @@ Code | Description
 * supports `,##__VA_ARGS__` extension which elides the comma
 * `__COUNTER__` `__BASE_FILE__` predefined macros
 
-## Bugs:
+## Limitations:
 
 * trigraphs not supported
 * digraphs not supported
@@ -58,5 +58,6 @@ Code | Description
 * Unicode (UTF8) not supported in source code
 
 Copyright © 2021 by [Digital Mars](http://www.digitalmars.com)
+
 [Boost License 1.0](http://boost.org/LICENSE_1_0.txt)
 
