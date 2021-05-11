@@ -22,20 +22,20 @@ $(OL
    $(LI Will process multiple source files at the same time. This increases speed
         because the contents of $(TT #include) files are cached.)
    $(LI If output files are not specified, a default file name is generated
-	from the source file name with the extension replaced with $(TT .i))
+        from the source file name with the extension replaced with $(TT .i))
    $(LI The only predefined macros are $(TT __BASE_FILE__, __FILE__, __LINE__, __COUNTER__,
-	__TIMESTAMP__, __DATE__, and __TIME__). Any others desired should be
-	set via the command line.)
+        __TIMESTAMP__, __DATE__, and __TIME__). Any others desired should be
+        set via the command line.)
    $(LI $(B -v) uses the following codes for $(TT #include) files:
-	$(TABLE2 Include Codes,
-	  $(TR $(TH Code) $(TH Description))
-	  $(TR $(TD $(TT S)) $(TD system file))
-	  $(TR $(TD ' ') $(TD normal file read))
-	  $(TR $(TD $(TT C)) $(TD file read from cached copy))
-	  $(TR $(TD $(TT O)) $(TD file skipped because of $(TT #pragma once)))
-	  $(TR $(TD $(TT G)) $(TD file skipped because of $(TT #include) guard))
-	 )
-	)
+        $(TABLE2 Include Codes,
+          $(TR $(TH Code) $(TH Description))
+          $(TR $(TD $(TT S)) $(TD system file))
+          $(TR $(TD ' ') $(TD normal file read))
+          $(TR $(TD $(TT C)) $(TD file read from cached copy))
+          $(TR $(TD $(TT O)) $(TD file skipped because of $(TT #pragma once)))
+          $(TR $(TD $(TT G)) $(TD file skipped because of $(TT #include) guard))
+         )
+        )
 )
 )
 
