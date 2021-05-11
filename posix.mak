@@ -33,7 +33,7 @@ SRCS=main.d cmdline.d context.d id.d skip.d macros.d textbuf.d ranges.d outdeps.
 	lexer.d constexpr.d number.d stringlit.d sources.d loc.d expanded.d \
 	directive.d file.d charclass.d
 
-DOCS=dmpp.dd LICENSE.md
+DOCS=dmpp.dd LICENSE.md README.md
 
 MAKEFILES=win32.mak posix.mak
 
