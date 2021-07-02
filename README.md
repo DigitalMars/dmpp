@@ -16,6 +16,15 @@ Option                            | Description
 **-o** *filename*                 | preprocessed output file
 **-v**                            | verbose
 
+If the output file is not specified:
+
+And the source file has an extension of `.c`, it will
+be named after the source file with the extension replaced with `.i`.
+
+Else if the source file has an extension of `.cpp`, `.cxx`, or `.hpp`,
+the output file will be the source file with the extension replaced with `.ii`.
+
+Else the output file will be the source file with `.ii` appended.
 
 ## Features:
 
