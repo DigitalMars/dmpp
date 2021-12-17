@@ -806,7 +806,7 @@ struct Lexer(R) if (isInputRange!R)
                      // \u or \U could be start of identifier
                     src.popFront();
                     err_fatal("unrecognized preprocessor token x%02x", c);
-                    assert(0);   // not handled yet
+                    //assert(0);   // not handled yet
                     break;
 
                 case ESC.expand:
