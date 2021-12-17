@@ -1,0 +1,15 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/dmpp
+dmpp.so
+dmpp.dylib
+dmpp.dll
+dmpp.a
+dmpp.lib
+dmpp-test-*
+*.exe
+*.o
+*.obj
+*.lst

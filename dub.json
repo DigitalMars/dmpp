@@ -1,0 +1,15 @@
+{
+	"authors": [
+		"Walter Bright"
+	],
+	"copyright": "Copyright © 2021, Walter Bright",
+	"description": "A C/C++ preprocessor written in DLang",
+	"license": "Boost 1.0",
+	"name": "dmpp",
+	"mainSourceFile": "src/dmd/main.d",
+	"importPaths": [
+		"src/dmd"
+	],
+	"buildRequirements": [ "allowWarnings" ],
+	"targetType": "executable"
+}
