@@ -451,8 +451,8 @@ struct Lexer(R) if (isInputRange!R)
                                 {
                                     src.popFront();
                                     src = src.skipCppComment();
+                                    continue;
                                 }
-                                continue;
 
                             case '*':
                                 static if (isContext)
@@ -806,8 +806,7 @@ struct Lexer(R) if (isInputRange!R)
                      // \u or \U could be start of identifier
                     src.popFront();
                     err_fatal("unrecognized preprocessor token x%02x", c);
-                    assert(0);   // not handled yet
-                    break;
+                    assert(0);
 
                 case ESC.expand:
                     static if (isContext)
@@ -819,7 +818,7 @@ struct Lexer(R) if (isInputRange!R)
                         noExpand = false;
                         return;
                     }
-                    goto default;
+                    else goto default;
 
                 default:
                     err_fatal("unrecognized preprocessor token x%02x", c);
