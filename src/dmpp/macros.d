@@ -886,11 +886,11 @@ unittest
 
 // This table is to speed the switch() lookup in macroExpand()
 private enum EXPAND : ubyte { none, doublequote, singlequote, expand, zero, dot, digit, idstart }
-private immutable EXPAND[256] expand;
 
-shared static this()
+private immutable EXPAND[256] expand = ()
 {
     // Initialize lookup table
+    EXPAND[256] expand;
     foreach (uint u; 0 .. 256)
     {
         EXPAND e;
@@ -902,14 +902,19 @@ shared static this()
             case 0:             e = EXPAND.zero;                break;
             case '.':           e = EXPAND.dot;                 break;
             case '0': .. case '9': e = EXPAND.digit;            break;
+
+            case '_':
+            case '$':           e = EXPAND.idstart;             break;
+
             default:
-                if (isIdentifierStart(cast(ubyte)u))
+                if ('A' <= u && u <= 'Z' || 'a' <= u && u <= 'z')
                     e = EXPAND.idstart;
                 break;
         }
         expand[u] = e;
     }
-}
+    return expand;
+}();
 
 void macroExpand(Context, R)(const(uchar)[] text, ref R outbuf)
 {

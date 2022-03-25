@@ -38,7 +38,7 @@ SRCS=$S/main.d $S/cmdline.d $S/context.d $S/id.d $S/skip.d $S/macros.d $S/textbu
 
 DOCS=LICENSE.md README.md
 
-DDOCS=$S\dmpp.dd
+DDOCS=$S/dmpp.dd
 
 MAKEFILES=win32.mak posix.mak
 
