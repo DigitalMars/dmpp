@@ -25,7 +25,7 @@ enum CClass
     multiTok        = 8,
 }
 
-immutable ubyte[256] cclassTable;
+const ubyte[256] cclassTable;
 
 /******************************************
  * Characters that make up the start of an identifier.
