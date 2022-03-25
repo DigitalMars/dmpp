@@ -5,7 +5,7 @@
 SCPDIR=../backup
 
 # Source files
-S=src/dmd
+S=src/dmpp
 
 ##### Tools
 
