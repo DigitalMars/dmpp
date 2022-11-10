@@ -6,9 +6,9 @@
 	"description": "A C/C++ preprocessor written in DLang",
 	"license": "Boost 1.0",
 	"name": "dmpp",
-	"mainSourceFile": "src/dmd/main.d",
+	"mainSourceFile": "src/dmpp/main.d",
 	"importPaths": [
-		"src/dmd"
+		"src/dmpp"
 	],
 	"buildRequirements": [ "allowWarnings" ],
 	"targetType": "executable"
